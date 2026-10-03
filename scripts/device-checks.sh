@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 collect_screenshots() {
+  adb logcat -d -s UiSmoke TestRunner || true
   mkdir -p screenshots
   adb pull /sdcard/Pictures/BrowserRouterTests screenshots/ || true
 }

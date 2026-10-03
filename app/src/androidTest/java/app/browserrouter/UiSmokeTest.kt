@@ -22,6 +22,7 @@ class UiSmokeTest {
         compose.activityRule.scenario.recreate()
     }
     @After fun captureCurrentState() {
+        runCatching { Log.e("UiSmoke", compose.onRoot().printToString()) }
         runCatching { screenshot("last-state") }
     }
 
@@ -39,7 +40,8 @@ class UiSmokeTest {
 
     @Test fun createRulePersistsAndControlsHaveLabels() {
         waitForHome()
-        compose.onNodeWithContentDescription("Создать правило").performClick()
+        compose.onNodeWithContentDescription("Создать правило").assertIsDisplayed().performClick()
+        compose.waitUntil(10000) { compose.onAllNodesWithTag("rule-editor-list").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Сохранить правило").assertIsNotEnabled()
         compose.onNodeWithTag("rule-editor-list").performScrollToNode(hasText("Домен или шаблон"))
         compose.onNodeWithText("Домен или шаблон").performTextInput("example.ru")
@@ -60,7 +62,8 @@ class UiSmokeTest {
         org.junit.Assert.assertEquals(Action.BROWSER, saved.action)
         org.junit.Assert.assertEquals(browserPackage, saved.browser)
         screenshot("rule-list")
-        compose.onNodeWithText("Изменить").performClick()
+        compose.onNodeWithText("Изменить").performScrollTo().assertIsDisplayed().performClick()
+        compose.waitUntil(10000) { compose.onAllNodesWithTag("rule-editor-list").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("rule-editor-list").performScrollToNode(hasText("Домен или шаблон"))
         compose.onNodeWithText("Домен или шаблон").assertTextContains("example.ru")
         screenshot("rule-editor")

@@ -50,10 +50,10 @@ fun RouterApp(
                     }
                 },
                 floatingActionButton = {
-                    if (screen == "rules" && config != null) ExtendedFloatingActionButton(
-                        modifier = Modifier.semantics { contentDescription = "Создать правило" },
-                        text = { Text("Создать правило") }, icon = { Icon(painterResource(R.drawable.ic_add), null) },
-                        onClick = { editingId = "new" })
+                    if (screen == "rules" && config != null) FloatingActionButton(
+                        onClick = { editingId = "new" }) {
+                        Icon(painterResource(R.drawable.ic_add), "Создать правило")
+                    }
                 },
             ) { padding ->
                 Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.TopCenter) {
