@@ -1,0 +1,32 @@
+name: Android checks
+on:
+  push:
+    branches: [main, feat/android-browser-router]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: checks-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+      - run: ./gradlew --no-daemon testDebugUnitTest lintDebug assembleDebug
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: checks-and-debug-apk
+          path: |
+            app/build/outputs/apk/debug/*.apk
+            app/build/reports/
+          if-no-files-found: warn
