@@ -8,6 +8,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -17,7 +18,7 @@ fun SettingsScreen(config: Config, apps: List<BrowserApp>, catalogLoading: Boole
                    onRequestRole: () -> Unit, onUpdate: ((Config) -> Config) -> Unit, onImport: () -> Unit,
                    onExport: () -> Unit, onReset: () -> Unit) {
     var picker by rememberSaveable { mutableStateOf(false) }
-    LazyColumn(Modifier.widthIn(max = 840.dp).fillMaxWidth(), contentPadding = PaddingValues(20.dp),
+    LazyColumn(Modifier.testTag("settings-list").widthIn(max = 840.dp).fillMaxWidth(), contentPadding = PaddingValues(20.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)) {
         item { SettingsGroup("Открытие ссылок") {
             Text("Если ни одно правило не совпало", style = MaterialTheme.typography.titleMedium)

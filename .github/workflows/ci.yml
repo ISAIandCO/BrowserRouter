@@ -73,4 +73,5 @@ jobs:
             app/build/reports/androidTests/
             app/build/outputs/androidTest-results/
             screenshots/
+            device-reports/
           if-no-files-found: warn

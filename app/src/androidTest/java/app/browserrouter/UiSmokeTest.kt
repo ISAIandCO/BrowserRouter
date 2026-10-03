@@ -44,11 +44,17 @@ class UiSmokeTest {
         compose.onNodeWithText("Домен или шаблон").performTextInput("example.ru")
         compose.onNodeWithText("Выбирать при открытии").performScrollTo().performClick()
         compose.onNodeWithText("Поиск приложения").performTextInput("Test Browser")
-        compose.onNodeWithText("Test Browser").performClick()
+        val browserPackage = InstrumentationRegistry.getInstrumentation().context.packageName
+        compose.waitUntil(10000) { compose.onAllNodesWithTag("app-$browserPackage").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("app-$browserPackage").performClick()
         compose.onNodeWithText("Сохранить правило").assertIsEnabled().performClick()
         compose.waitUntil(10000) { compose.onAllNodesWithText("1. example.ru").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithContentDescription("Активность правила example.ru").assertExists()
         compose.onNodeWithContentDescription("Удалить example.ru").assertExists()
+        compose.onNodeWithText("→ Test Browser").assertExists()
+        val saved = ConfigStore(InstrumentationRegistry.getInstrumentation().targetContext).load().rules.single()
+        org.junit.Assert.assertEquals(Action.BROWSER, saved.action)
+        org.junit.Assert.assertEquals(browserPackage, saved.browser)
         screenshot("rule-list")
         compose.onNodeWithText("Изменить").performClick()
         compose.onNodeWithText("Домен или шаблон").assertTextContains("example.ru")
@@ -59,7 +65,8 @@ class UiSmokeTest {
         waitForHome()
         screenshot("home")
         compose.onNodeWithText("Настройки").performClick()
-        compose.onNodeWithText("Тёмная").performScrollTo().performClick()
+        compose.onNodeWithTag("settings-list").performScrollToNode(hasText("Тёмная"))
+        compose.onNodeWithText("Тёмная").performClick()
         screenshot("settings-dark")
         compose.onNodeWithText("Светлая").performClick()
         screenshot("settings-light")

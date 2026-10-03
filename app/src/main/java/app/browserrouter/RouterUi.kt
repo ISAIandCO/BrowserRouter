@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -177,7 +178,7 @@ fun appLabel(apps: List<BrowserApp>, pkg: String?): String = if (pkg == null) "Ð
 
 @Composable
 fun AppRow(app: BrowserApp, onClick: () -> Unit) {
-    Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
+    Card(onClick = onClick, modifier = Modifier.testTag("app-${app.packageName}").fillMaxWidth()) {
         Row(Modifier.padding(16.dp).heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             val bitmap = remember(app.packageName, app.icon) { app.icon?.toBitmap(48, 48)?.asImageBitmap() }
