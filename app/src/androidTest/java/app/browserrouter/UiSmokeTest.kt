@@ -41,8 +41,10 @@ class UiSmokeTest {
         waitForHome()
         compose.onNodeWithContentDescription("Создать правило").performClick()
         compose.onNodeWithText("Сохранить правило").assertIsNotEnabled()
+        compose.onNodeWithTag("rule-editor-list").performScrollToNode(hasText("Домен или шаблон"))
         compose.onNodeWithText("Домен или шаблон").performTextInput("example.ru")
-        compose.onNodeWithText("Выбирать при открытии").performScrollTo().performClick()
+        compose.onNodeWithTag("rule-editor-list").performScrollToNode(hasText("Выбирать при открытии"))
+        compose.onNodeWithText("Выбирать при открытии").performClick()
         compose.onNodeWithText("Поиск приложения").performTextInput("Test Browser")
         val browserPackage = InstrumentationRegistry.getInstrumentation().context.packageName
         compose.waitUntil(10000) { compose.onAllNodesWithTag("app-$browserPackage").fetchSemanticsNodes().isNotEmpty() }
@@ -57,6 +59,7 @@ class UiSmokeTest {
         org.junit.Assert.assertEquals(browserPackage, saved.browser)
         screenshot("rule-list")
         compose.onNodeWithText("Изменить").performClick()
+        compose.onNodeWithTag("rule-editor-list").performScrollToNode(hasText("Домен или шаблон"))
         compose.onNodeWithText("Домен или шаблон").assertTextContains("example.ru")
         screenshot("rule-editor")
     }

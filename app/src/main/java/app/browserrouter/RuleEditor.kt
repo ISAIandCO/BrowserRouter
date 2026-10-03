@@ -11,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -55,7 +56,7 @@ fun RuleEditor(initial: Rule?, apps: List<BrowserApp>, sources: List<BrowserApp>
             }
         }) { padding ->
         Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.TopCenter) {
-            LazyColumn(Modifier.widthIn(max = 720.dp).fillMaxWidth(),
+            LazyColumn(Modifier.testTag("rule-editor-list").widthIn(max = 720.dp).fillMaxWidth(),
                 contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 item {
                     Text("Откуда приходит ссылка", style = MaterialTheme.typography.titleLarge)
