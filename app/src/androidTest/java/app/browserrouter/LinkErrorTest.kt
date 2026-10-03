@@ -17,7 +17,7 @@ class LinkErrorTest {
         ConfigStore(context).save(Config(fallback = "missing.browser"))
         ActivityScenario.launch<LinkActivity>(webIntent("https://example.ru").setComponent(ComponentName(context, LinkActivity::class.java))).use {
             compose.waitUntil(10000) { compose.onAllNodesWithText("Выбранный браузер недоступен. Выберите другой").fetchSemanticsNodes().isNotEmpty() }
-            compose.onNodeWithText("Test Browser").assertExists()
+            compose.onNodeWithText(TEST_BROWSER_LABEL).assertExists()
         }
         ConfigStore(context).save(Config())
     }
@@ -27,7 +27,7 @@ class LinkErrorTest {
         file.writeText("{broken")
         ActivityScenario.launch<LinkActivity>(webIntent("https://example.ru").setComponent(ComponentName(context, LinkActivity::class.java))).use {
             compose.waitUntil(10000) { compose.onAllNodesWithText("Настройки повреждены или недоступны. Выберите браузер; восстановить настройки можно в BrowserRouter.").fetchSemanticsNodes().isNotEmpty() }
-            compose.onNodeWithText("Test Browser").assertExists()
+            compose.onNodeWithText(TEST_BROWSER_LABEL).assertExists()
             org.junit.Assert.assertEquals("{broken", file.readText())
         }
         ConfigStore(context).save(Config())

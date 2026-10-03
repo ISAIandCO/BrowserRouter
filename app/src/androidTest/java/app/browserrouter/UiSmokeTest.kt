@@ -57,7 +57,7 @@ class UiSmokeTest {
         compose.waitUntil(10000) { compose.onAllNodesWithText("1. example.ru").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithContentDescription("Активность правила example.ru").assertExists()
         compose.onNodeWithContentDescription("Удалить example.ru").assertExists()
-        compose.onNodeWithText("→ Test Browser").assertExists()
+        compose.onNodeWithText("→ $TEST_BROWSER_LABEL").assertExists()
         val saved = ConfigStore(InstrumentationRegistry.getInstrumentation().targetContext).load().rules.single()
         org.junit.Assert.assertEquals(Action.BROWSER, saved.action)
         org.junit.Assert.assertEquals(browserPackage, saved.browser)
@@ -81,6 +81,23 @@ class UiSmokeTest {
         compose.waitUntil(10000) { ConfigStore(InstrumentationRegistry.getInstrumentation().targetContext).load().theme == ThemeMode.LIGHT }
         screenshot("settings-light")
         compose.onNodeWithContentDescription("Цвета обоев").assertExists()
+    }
+
+    @Test fun longDomainAndBrowserNameRemainEditable() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val browserPackage = InstrumentationRegistry.getInstrumentation().context.packageName
+        val host = "a-long-domain-label-for-the-list.another-long-subdomain.example.ru"
+        ConfigStore(context).save(Config(rules = listOf(Rule(host = host,
+            action = Action.BROWSER, browser = browserPackage)), onboarded = true))
+        compose.activityRule.scenario.onActivity { ViewModelProvider(it)[RouterModel::class.java].reload() }
+        compose.activityRule.scenario.recreate()
+        compose.waitUntil(10000) { compose.onAllNodesWithText("→ $TEST_BROWSER_LABEL").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("→ $TEST_BROWSER_LABEL").performScrollTo().assertIsDisplayed()
+        screenshot("long-names")
+        compose.onNodeWithText("Изменить").performScrollTo().assertIsDisplayed().performClick()
+        compose.waitUntil(10000) { compose.onAllNodesWithTag("rule-editor-list").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("rule-editor-list").performScrollToNode(hasText("Домен или шаблон"))
+        compose.onNodeWithText("Домен или шаблон").assertTextContains(host)
     }
 
     private fun screenshot(name: String) {

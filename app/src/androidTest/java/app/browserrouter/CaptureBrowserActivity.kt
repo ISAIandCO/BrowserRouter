@@ -11,3 +11,5 @@ class CaptureBrowserActivity : Activity() {
         setContentView(TextView(this).apply { text = intent.dataString })
     }
 }
+
+const val TEST_BROWSER_LABEL = "Test Browser с длинным названием для проверки переноса текста"

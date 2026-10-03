@@ -4,6 +4,16 @@ collect_screenshots() {
   adb logcat -d -s UiSmoke TestRunner || true
   mkdir -p screenshots
   adb pull /sdcard/Pictures/BrowserRouterTests screenshots/ || true
+  # Temporary remote visual-review output; test data only.
+  python3 - <<'PY'
+import pathlib, base64
+root = pathlib.Path("screenshots/BrowserRouterTests")
+for name in ("rule-list-phone.png", "rule-editor-phone.png", "settings-dark-phone.png",
+             "settings-light-phone.png", "long-names-large-font.png", "rule-list-wide.png"):
+    path = root / name
+    if path.exists():
+        print("BROWSERROUTER_SCREENSHOT " + name + " " + base64.b64encode(path.read_bytes()).decode())
+PY
 }
 trap collect_screenshots EXIT
 save_reports() {
