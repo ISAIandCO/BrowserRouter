@@ -43,12 +43,14 @@ class UiSmokeTest {
         compose.onNodeWithText("Сохранить правило").assertIsNotEnabled()
         compose.onNodeWithTag("rule-editor-list").performScrollToNode(hasText("Домен или шаблон"))
         compose.onNodeWithText("Домен или шаблон").performTextInput("example.ru")
+        androidx.test.espresso.Espresso.closeSoftKeyboard()
         compose.onNodeWithTag("rule-editor-list").performScrollToNode(hasText("Выбирать при открытии"))
-        compose.onNodeWithText("Выбирать при открытии").performClick()
+        compose.onNodeWithText("Выбирать при открытии").performScrollTo().performClick()
+        compose.waitUntil(10000) { compose.onAllNodesWithText("Поиск приложения").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Поиск приложения").performTextInput("Test Browser")
         val browserPackage = InstrumentationRegistry.getInstrumentation().context.packageName
         compose.waitUntil(10000) { compose.onAllNodesWithTag("app-$browserPackage").fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithTag("app-$browserPackage").performClick()
+        compose.onNodeWithTag("app-$browserPackage").performScrollTo().performClick()
         compose.onNodeWithText("Сохранить правило").assertIsEnabled().performClick()
         compose.waitUntil(10000) { compose.onAllNodesWithText("1. example.ru").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithContentDescription("Активность правила example.ru").assertExists()
@@ -70,8 +72,10 @@ class UiSmokeTest {
         compose.onNodeWithText("Настройки").performClick()
         compose.onNodeWithTag("settings-list").performScrollToNode(hasText("Тёмная"))
         compose.onNodeWithText("Тёмная").performClick()
+        compose.waitUntil(10000) { ConfigStore(InstrumentationRegistry.getInstrumentation().targetContext).load().theme == ThemeMode.DARK }
         screenshot("settings-dark")
         compose.onNodeWithText("Светлая").performClick()
+        compose.waitUntil(10000) { ConfigStore(InstrumentationRegistry.getInstrumentation().targetContext).load().theme == ThemeMode.LIGHT }
         screenshot("settings-light")
         compose.onNodeWithContentDescription("Цвета обоев").assertExists()
     }
