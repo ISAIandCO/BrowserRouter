@@ -87,7 +87,7 @@ class UiSmokeTest {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val browserPackage = InstrumentationRegistry.getInstrumentation().context.packageName
         val host = "a-long-domain-label-for-the-list.another-long-subdomain.example.ru"
-        ConfigStore(context).save(Config(rules = listOf(Rule(host = host,
+        ConfigStore(context).save(Config(rules = listOf(app.browserrouter.Rule(host = host,
             action = Action.BROWSER, browser = browserPackage)), onboarded = true))
         compose.activityRule.scenario.onActivity { ViewModelProvider(it)[RouterModel::class.java].reload() }
         compose.activityRule.scenario.recreate()
