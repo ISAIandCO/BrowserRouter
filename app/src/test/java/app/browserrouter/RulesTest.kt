@@ -48,6 +48,7 @@ class RulesTest {
         assertTrue(matches(rule("пример.рф"), link("https://xn--e1afmkfd.xn--p1ai"), null))
         assertTrue(matches(rule("*.рф", HostMode.WILDCARD), link("https://пример.рф"), null))
         assertEquals("example.ru", normalizeHost("EXAMPLE。RU."))
+        assertTrue(matches(rule("*。РФ。", HostMode.WILDCARD), link("HTTPS://ПРИМЕР.РФ/"), null))
     }
     @Test fun portSchemeAndPathAreConjunctive() {
         val r = rule().copy(port = 8443, scheme = "https", pathPrefix = "/news/")
@@ -90,6 +91,7 @@ class RulesTest {
         val self = "app.browserrouter"
         assertTrue(route(Config(listOf(rule().copy(browser = self))), link(), null, setOf(self), self) is Route.Choose)
         assertTrue(route(Config(fallback = self), link(), null, setOf(self), self) is Route.Choose)
+        assertTrue(route(Config(fallback = "app.browserrouter.debug"), link(), null, setOf("app.browserrouter.debug"), self) is Route.Choose)
     }
     @Test fun ipv6AndIpWork() {
         assertEquals("[2001:db8::1]", link("https://[2001:db8::1]:8443/a").host)

@@ -7,6 +7,9 @@ import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Rule
 import org.junit.Test
 import org.junit.Before
+import org.junit.After
+import androidx.lifecycle.ViewModelProvider
+import android.util.Log
 import java.io.File
 
 class UiSmokeTest {
@@ -15,9 +18,24 @@ class UiSmokeTest {
         ConfigStore(InstrumentationRegistry.getInstrumentation().targetContext).save(Config(onboarded = true))
         compose.activityRule.scenario.recreate()
     }
+    @After fun captureCurrentState() {
+        runCatching { screenshot("last-state") }
+    }
+
+    private fun waitForHome() {
+        try {
+            compose.waitUntil(10000) { compose.onAllNodesWithText("Создать правило").fetchSemanticsNodes().isNotEmpty() }
+        } catch (error: Throwable) {
+            compose.runOnIdle {
+                Log.e("UiSmoke", "Model: ${ViewModelProvider(compose.activity)[RouterModel::class.java].state.value}")
+            }
+            Log.e("UiSmoke", compose.onRoot().printToString())
+            throw error
+        }
+    }
 
     @Test fun createRulePersistsAndControlsHaveLabels() {
-        compose.waitUntil(10000) { compose.onAllNodesWithText("Создать правило").fetchSemanticsNodes().isNotEmpty() }
+        waitForHome()
         compose.onNodeWithText("Создать правило").performClick()
         compose.onNodeWithText("Сохранить правило").assertIsNotEnabled()
         compose.onNodeWithText("Домен или шаблон").performTextInput("example.ru")
@@ -32,7 +50,7 @@ class UiSmokeTest {
     }
 
     @Test fun settingsAndThemeAreReachable() {
-        compose.waitUntil(10000) { compose.onAllNodesWithText("Создать правило").fetchSemanticsNodes().isNotEmpty() }
+        waitForHome()
         screenshot("home")
         compose.onNodeWithText("Настройки").performClick()
         compose.onNodeWithText("Тёмная").performScrollTo().performClick()

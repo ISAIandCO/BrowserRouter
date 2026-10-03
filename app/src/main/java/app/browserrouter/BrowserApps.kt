@@ -13,10 +13,11 @@ data class BrowserApp(val packageName: String, val label: String, val icon: Draw
 fun browsers(pm: PackageManager, self: String, url: String? = null): List<BrowserApp> {
     val urls = if (url == null) listOf("https://browserrouter.invalid/", "http://browserrouter.invalid/") else listOf(url)
     return urls.flatMap { value ->
-        pm.queryIntentActivities(webIntent(value), PackageManager.MATCH_ALL or PackageManager.MATCH_DEFAULT_ONLY or PackageManager.GET_RESOLVED_FILTER)
+        pm.queryIntentActivities(webIntent(value).setData(Uri.parse(value).normalizeScheme()),
+            PackageManager.MATCH_ALL or PackageManager.MATCH_DEFAULT_ONLY or PackageManager.GET_RESOLVED_FILTER)
     }.filter { r ->
         val a = r.activityInfo
-        a.packageName != self && a.exported && a.enabled && a.applicationInfo.enabled && a.permission == null &&
+        !isRouterPackage(a.packageName, self) && a.exported && a.enabled && a.applicationInfo.enabled && a.permission == null &&
             (url != null || (r.filter != null && r.filter.countDataAuthorities() == 0 && r.filter.countDataPaths() == 0))
     }.distinctBy { it.activityInfo.packageName }.map { r ->
         BrowserApp(r.activityInfo.packageName, r.loadLabel(pm).toString(), r.loadIcon(pm),
@@ -40,7 +41,7 @@ fun Activity.sourcePackage(): String? = runCatching {
 }.getOrNull()?.takeUnless { it == packageName }
 
 fun Activity.openBrowser(link: WebLink, browser: BrowserApp): String? {
-    if (browser.packageName == packageName || browser.component?.packageName != browser.packageName)
+    if (isRouterPackage(browser.packageName, packageName) || browser.component?.packageName != browser.packageName)
         return "Недопустимый обработчик ссылки"
     return runCatching {
         // Fresh intent deliberately excludes untrusted flags, selectors, ClipData and extras.

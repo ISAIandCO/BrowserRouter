@@ -1,4 +1,4 @@
-@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class, androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class, androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 package app.browserrouter
 
 import androidx.activity.compose.BackHandler
@@ -152,7 +152,7 @@ private fun RulesScreen(
                         Text(listOfNotNull(rule.scheme, rule.port?.let { "Порт $it" }, rule.pathPrefix).joinToString(" · "), style = MaterialTheme.typography.bodySmall)
                     Text("→ ${if (rule.action == Action.ASK) "Выбрать при открытии" else appLabel(apps, rule.browser)}",
                         style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         TextButton(onClick = { onEdit(rule.id) }) { Text("Изменить") }
                         IconButton(onClick = { onMove(rule.id, -1) }, enabled = index > 0) {
                             Icon(painterResource(R.drawable.ic_up), "Повысить приоритет ${rule.host}")

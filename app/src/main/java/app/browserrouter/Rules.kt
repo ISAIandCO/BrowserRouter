@@ -63,8 +63,10 @@ data class WebLink(val original: String, val scheme: String, val host: String, v
     }
 }
 
+private fun normalizeDots(value: String) = value.replace('\u3002', '.').replace('\uFF0E', '.').replace('\uFF61', '.')
+
 fun normalizeHost(value: String): String {
-    val host = value.trim().replace('\u3002', '.').replace('\uFF0E', '.').replace('\uFF61', '.').removeSuffix(".")
+    val host = normalizeDots(value.trim()).removeSuffix(".")
     require(host.isNotEmpty() && !host.endsWith('.')) { "Некорректное имя сервера" }
     if (host.startsWith('[') && host.endsWith(']')) {
         require(URI("https://$host/").host != null) { "Некорректный IPv6-адрес" }
@@ -77,7 +79,7 @@ fun normalizeHost(value: String): String {
 
 private fun hostPattern(rule: Rule): String = when (rule.mode) {
     HostMode.REGEX -> rule.host
-    HostMode.WILDCARD -> rule.host.trim().removeSuffix(".").split('.').joinToString(".") {
+    HostMode.WILDCARD -> normalizeDots(rule.host.trim()).removeSuffix(".").split('.').joinToString(".") {
         if ('*' in it) {
             require(it == "*") { "Звёздочка должна занимать целую часть имени: *.example.ru" }
             "*"
@@ -94,7 +96,7 @@ fun validateRule(rule: Rule): String? = runCatching {
     require(rule.scheme == null || rule.scheme in listOf("http", "https")) { "Некорректная схема" }
     require(rule.port == null || rule.port in 1..65535) { "Порт должен быть от 1 до 65535" }
     require(rule.pathPrefix == null || (rule.pathPrefix.startsWith('/') && rule.pathPrefix.length <= 2048)) { "Путь должен начинаться с / и быть не длиннее 2048 символов" }
-    require(rule.source == null || rule.source.matches(Regex("[A-Za-z0-9_]+(\\.[A-Za-z0-9_]+)+"))) { "Некорректный пакет источника" }
+    require(rule.source == null || validPackage(rule.source)) { "Некорректный пакет источника" }
     require(rule.action != Action.BROWSER || !rule.browser.isNullOrBlank()) { "Выберите браузер" }
     require(rule.browser == null || validPackage(rule.browser)) { "Некорректный пакет браузера" }
 }.exceptionOrNull()?.let { if (it is java.util.regex.PatternSyntaxException) "Ошибка regex: ${it.description}" else it.message ?: "Некорректное правило" }
@@ -124,8 +126,11 @@ fun route(config: Config, link: WebLink, source: String?, available: Set<String>
     val target = if (rule != null) rule.browser else config.fallback
     return when {
         target == null -> Route.Choose(null)
-        target == self -> Route.Choose("BrowserRouter не может открывать ссылку через себя")
+        isRouterPackage(target, self) -> Route.Choose("BrowserRouter не может открывать ссылку через себя")
         target !in available -> Route.Choose("Выбранный браузер недоступен. Выберите другой")
         else -> Route.Open(target, rule?.id)
     }
 }
+
+fun isRouterPackage(candidate: String, self: String) = candidate == self ||
+    candidate == "app.browserrouter" || candidate == "app.browserrouter.debug"

@@ -34,6 +34,7 @@ class IntentHandlingTest {
         val found = browsers(context.packageManager, context.packageName)
         assertTrue(found.any { it.packageName == target })
         assertFalse(found.any { it.packageName == context.packageName })
+        assertTrue(browsers(context.packageManager, context.packageName, "HTTPS://example.ru/").any { it.packageName == target })
     }
     @Test fun externalLinkRoutesToConfiguredPackageWithUnchangedUrl() {
         val url = "https://example.ru/path?q=a%26b#fragment"
@@ -49,7 +50,7 @@ class IntentHandlingTest {
             assertTrue(forwarded.categories.contains(Intent.CATEGORY_BROWSABLE))
         }
     }
-    @Test fun sourceRuleWorksWhenReferrerProvidedAndFallbackOtherwise() {
+    @Test fun sourceRuleWorksWhenReferrerProvided() {
         val url = "http://example.com/"
         ConfigStore(context).save(Config(listOf(Rule(host = "example.com", source = "org.telegram.messenger", action = Action.BROWSER, browser = target))))
         ActivityScenario.launch<LinkActivity>(webIntent(url).setComponent(ComponentName(context, LinkActivity::class.java))
@@ -60,7 +61,7 @@ class IntentHandlingTest {
         ConfigStore(context).save(Config(fallback = target))
         ActivityScenario.launch<LinkActivity>(webIntent(url).setComponent(ComponentName(context, LinkActivity::class.java))).use { waitForForward(url) }
     }
-    @Test fun malformedUrlAndMissingTargetDoNotLaunchOtherApps() {
+    @Test fun malformedUrlDoesNotLaunchOtherApps() {
         ConfigStore(context).save(Config(fallback = "missing.browser"))
         ActivityScenario.launch<LinkActivity>(webIntent("javascript:alert(1)").setComponent(ComponentName(context, LinkActivity::class.java))).use {
             instrumentation.waitForIdleSync()
