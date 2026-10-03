@@ -11,7 +11,7 @@ Windows: `gradlew.bat`. Android Studio создаёт local.properties с sdk.di
 
 ## CI
 
-`ci.yml` запускается для PR, main и вручную; проверяет JVM tests, Android lint, собирает debug APK. После успешной сборки эмулятор API 35 выполняет Intent и Compose tests, дополнительные UI-проходы при font_scale=1.6 и широком окне. Отчёты и APK — `checks-and-debug-apk`; результаты устройства и снимки — `device-tests-and-screenshots`. CI не создаёт релизы на обычный commit/PR.
+`ci.yml` запускается для PR, main и вручную; проверяет JVM tests, debug/release Android lint, собирает debug APK и release с R8 без подписи. После успешной сборки эмулятор API 35 выполняет Intent и Compose tests, дополнительные UI-проходы при font_scale=1.6 и широком окне. Отчёты и APK — `checks-and-debug-apk`; результаты устройства и снимки — `device-tests-and-screenshots`. CI не создаёт релизы на обычный commit/PR.
 
 Debug package — `app.browserrouter.debug`, release — `app.browserrouter`. Их настройки независимы. Временный debug keystore генерируется SDK; новая debug-сборка может потребовать удаления прежней. Перед этим экспортируйте настройки. Для подписанных релизов сохраняйте один постоянный ключ.
 

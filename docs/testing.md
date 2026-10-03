@@ -5,7 +5,9 @@
 - RulesTest: порядок, exact/domain/suffix/wildcard/regex, IDN/case/trailing dot, порты, схема/path, отключённые правила, source/null, сохранение исходного URL, missing browser, fallback, ASK и self-routing, IPv6 и некорректные URL.
 - ConfigCodecTest: round-trip, unknown version, malformed/oversized JSON, duplicate IDs, invalid regex, строгий Boolean.
 - IntentHandlingTest: видимость generic handler, исключение self, external VIEW → явный компонент с исходным URL, отсутствие untrusted extras/referrer, правило с referrer, fallback, отклонение не-web URL.
-- UiSmokeTest: создание и повторное открытие сохранённого правила, disabled save для пустого условия, descriptions controls, настройки и переключение светлой/тёмной темы; снимки экрана.
+- BrowserRoleTest: назначение системной роли браузера через shell на AOSP API 35 и проверка RoleManager.isRoleHeld; не подменяет проверку пользовательского диалога и конкретной прошивки.
+- LinkErrorTest: недоступный браузер и повреждённый файл дают выбор обработчика; повреждённый файл не перезаписывается.
+- UiSmokeTest: создание и повторное открытие сохранённого правила с проверкой package/action на диске, disabled save для пустого условия, descriptions controls, длинные домен/название браузера, доступ к редактированию после прокрутки, настройки и сохранение светлой/тёмной темы; снимки экрана.
 - CI выполняет UI smoke на телефоне, при font_scale 1.6 и широкой области. Android Lint обязателен.
 
 Test-only CaptureBrowserActivity находится только в androidTest APK и не попадает в release. Intent tests перехватывают/проверяют outgoing Intent через Espresso Intents; они не доказывают загрузку страницы в Firefox, Chrome или Bearium.
@@ -18,4 +20,21 @@ Test-only CaptureBrowserActivity находится только в androidTest 
 
 ## Фактически выполненные проверки
 
-Состояние конкретной ревизии подтверждается соответствующим GitHub Actions run и его отчётами, а не наличием теста в исходниках. Итоговый run и ограничения будут зафиксированы после завершения CI. Реальные браузеры, Telegram, TalkBack и OEM default-role на физических устройствах в удалённой сборочной среде не проверяются.
+[Успешный полный прогон](https://github.com/ISAIandCO/BrowserRouter/actions/runs/37156106772) на ревизии `ca92cca3516d8795a3f9c32098285fd22a8ca6da`:
+
+| Проверка | Результат |
+|---|---|
+| RulesTest + ConfigCodecTest | 21 JVM-тест, без ошибок |
+| lintDebug + lintRelease | Успешно, без ошибок lint; предупреждения остаются в отчётах |
+| assembleDebug + assembleRelease | Успешно; release с R8, без подписи |
+| API 35: Intent, ошибки, роль браузера и UI | 11 Android-тестов, без ошибок |
+| API 35: UI, font_scale 1.6 | 3 теста, без ошибок |
+| API 35: UI, окно 1600×1200, density 160 | 3 теста, без ошибок |
+
+Итого 17 Android-проходов: 11 самостоятельных тестов и 6 повторов UI при других параметрах. Проверяется фактически сохранённый package/action, а не только появление строки правила. Длинное название браузера и длинный домен проверяются во всех трёх UI-вариантах.
+
+Визуально просмотрены реальные [снимки](screenshots/): список, редактор, светлая/тёмная темы, длинные названия при крупном шрифте и широкий экран. Снимки захватывают интерфейс Compose; системные панели не входят в изображения.
+
+Артефакт [APK и отчёты](https://github.com/ISAIandCO/BrowserRouter/actions/runs/37156106772/artifacts/11285627081); артефакт [Android-отчёты и все снимки](https://github.com/ISAIandCO/BrowserRouter/actions/runs/37156106772/artifacts/11286112450). Отчёты каждого размера сохраняются отдельно в `device-reports/phone`, `device-reports/large-font`, `device-reports/wide`. Артефакты Actions имеют срок хранения; выбранные PNG сохранены в репозитории.
+
+Реальные Firefox/Chrome/Bearium, Telegram, TalkBack, launcher masks и OEM default-role на физических устройствах не проверялись. Проверка системного пользовательского диалога, 200% шрифта и подписанного обновления остаётся ручной. Подписанный release workflow подготовлен, но фактическая подпись и публикация требуют ключа владельца и тега версии.
