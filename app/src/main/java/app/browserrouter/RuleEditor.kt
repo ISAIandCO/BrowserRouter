@@ -12,6 +12,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import java.util.UUID
 
@@ -93,7 +95,7 @@ fun RuleEditor(initial: Rule?, apps: List<BrowserApp>, sources: List<BrowserApp>
                 item {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Text("Правило активно", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
-                        Switch(enabled, { enabled = it })
+                        Switch(enabled, { enabled = it }, Modifier.semantics { contentDescription = "Правило активно" })
                     }
                     TextButton(onClick = { advanced = !advanced }) { Text(if (advanced) "Скрыть дополнительные условия" else "Дополнительные условия") }
                     AnimatedVisibility(advanced) {

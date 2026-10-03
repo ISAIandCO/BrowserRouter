@@ -35,18 +35,22 @@ class RouterModel(app: Application) : AndroidViewModel(app) {
             persist(transform(old))
         }
     }
-    private suspend fun persist(config: Config) {
-        runCatching { withContext(Dispatchers.IO) { store.save(config) } }.fold(
-            { mutable.value = RouterState(config, false) },
-            { mutable.value = mutable.value.copy(error = "Не удалось сохранить: ${it.message}") },
+    private suspend fun persist(config: Config): Boolean {
+        return runCatching { withContext(Dispatchers.IO) { store.save(config) } }.fold(
+            { mutable.value = RouterState(config, false); true },
+            { mutable.value = mutable.value.copy(error = "Не удалось сохранить: ${it.message}"); false },
         )
     }
     fun clearError() { mutable.value = mutable.value.copy(error = null) }
-    fun saveRule(rule: Rule) = update { config ->
-        val index = config.rules.indexOfFirst { it.id == rule.id }
-        config.copy(rules = config.rules.toMutableList().apply {
-            if (index < 0) add(rule) else set(index, rule)
-        })
+    fun saveRule(rule: Rule, onSaved: () -> Unit = {}) = viewModelScope.launch {
+        mutex.withLock {
+            val config = mutable.value.config ?: return@withLock
+            val index = config.rules.indexOfFirst { it.id == rule.id }
+            val next = config.copy(rules = config.rules.toMutableList().apply {
+                if (index < 0) add(rule) else set(index, rule)
+            })
+            if (persist(next)) onSaved()
+        }
     }
     fun move(id: String, delta: Int) = update { c ->
         val rules = c.rules.toMutableList()

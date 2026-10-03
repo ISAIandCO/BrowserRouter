@@ -14,7 +14,7 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun SettingsScreen(config: Config, apps: List<BrowserApp>, catalogLoading: Boolean, roleHeld: Boolean,
-                   onRequestRole: () -> Unit, onUpdate: (Config) -> Unit, onImport: () -> Unit,
+                   onRequestRole: () -> Unit, onUpdate: ((Config) -> Config) -> Unit, onImport: () -> Unit,
                    onExport: () -> Unit, onReset: () -> Unit) {
     var picker by rememberSaveable { mutableStateOf(false) }
     LazyColumn(Modifier.widthIn(max = 840.dp).fillMaxWidth(), contentPadding = PaddingValues(20.dp),
@@ -31,7 +31,7 @@ fun SettingsScreen(config: Config, apps: List<BrowserApp>, catalogLoading: Boole
         item { SettingsGroup("Оформление") {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ThemeMode.entries.forEach { mode -> FilterChip(config.theme == mode,
-                    { onUpdate(config.copy(theme = mode)) }, label = { Text(when (mode) {
+                    { onUpdate { it.copy(theme = mode) } }, label = { Text(when (mode) {
                         ThemeMode.SYSTEM -> "Системная"; ThemeMode.LIGHT -> "Светлая"; ThemeMode.DARK -> "Тёмная"
                     }) }) }
             }
@@ -40,7 +40,7 @@ fun SettingsScreen(config: Config, apps: List<BrowserApp>, catalogLoading: Boole
                     Text("Цвета обоев", style = MaterialTheme.typography.titleMedium)
                     Text("Dynamic color на Android 12 и новее", style = MaterialTheme.typography.bodySmall)
                 }
-                Switch(config.dynamicColor, { onUpdate(config.copy(dynamicColor = it)) },
+                Switch(config.dynamicColor, { value -> onUpdate { it.copy(dynamicColor = value) } },
                     Modifier.semantics { contentDescription = "Цвета обоев" })
             }
         } }
@@ -58,7 +58,7 @@ fun SettingsScreen(config: Config, apps: List<BrowserApp>, catalogLoading: Boole
         } }
     }
     if (picker) AppPicker("Браузер для остальных ссылок", apps,
-        onSelect = { onUpdate(config.copy(fallback = it)); picker = false }, onDismiss = { picker = false })
+        onSelect = { value -> onUpdate { it.copy(fallback = value) }; picker = false }, onDismiss = { picker = false })
 }
 
 @Composable

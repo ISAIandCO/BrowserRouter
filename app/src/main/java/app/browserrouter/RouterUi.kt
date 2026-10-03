@@ -35,7 +35,7 @@ fun RouterApp(
     RouterTheme(config ?: Config()) {
         if (editingId != null && config != null) {
             RuleEditor(config.rules.firstOrNull { it.id == editingId }, apps, sources,
-                onCancel = { editingId = null }, onSave = { model.saveRule(it); editingId = null })
+                onCancel = { editingId = null }, onSave = { model.saveRule(it) { editingId = null } })
         } else {
             BackHandler(enabled = screen != "rules") { screen = "rules" }
             Scaffold(
@@ -64,13 +64,13 @@ fun RouterApp(
                             OutlinedButton(onClick = { reset = true }) { Text("Сбросить настройки") }
                         }
                         else -> AnimatedContent(screen, label = "Экран") { destination ->
-                            if (destination == "rules") RulesScreen(config, apps, roleHeld, onRequestRole,
+                            if (destination == "rules") RulesScreen(config, apps, sources, roleHeld, onRequestRole,
                                 onDismissIntro = { model.update { it.copy(onboarded = true) } },
                                 onCreate = { editingId = "new" }, onEdit = { editingId = it },
                                 onToggle = { rule -> model.saveRule(rule.copy(enabled = !rule.enabled)) },
                                 onMove = model::move, onDelete = { deleteId = it })
                             else SettingsScreen(config, apps, catalogLoading, roleHeld, onRequestRole,
-                                onUpdate = { next -> model.update { next } }, onImport, onExport, { reset = true })
+                                onUpdate = { transform -> model.update(transform) }, onImport, onExport, { reset = true })
                         }
                     }
                 }
@@ -104,7 +104,7 @@ fun RouterApp(
 
 @Composable
 private fun RulesScreen(
-    config: Config, apps: List<BrowserApp>, roleHeld: Boolean, onRequestRole: () -> Unit,
+    config: Config, apps: List<BrowserApp>, sources: List<BrowserApp>, roleHeld: Boolean, onRequestRole: () -> Unit,
     onDismissIntro: () -> Unit, onCreate: () -> Unit, onEdit: (String) -> Unit,
     onToggle: (Rule) -> Unit, onMove: (String, Int) -> Unit, onDelete: (String) -> Unit,
 ) {
@@ -147,7 +147,7 @@ private fun RulesScreen(
                         }
                         Switch(rule.enabled, { onToggle(rule) }, Modifier.semantics { contentDescription = "Активность правила ${rule.host}" })
                     }
-                    Text(rule.source?.let { "Источник: $it (если определён)" } ?: "Из любого приложения")
+                    Text(rule.source?.let { pkg -> "Источник: ${sources.firstOrNull { it.packageName == pkg }?.label ?: pkg} (если определён)" } ?: "Из любого приложения")
                     if (rule.scheme != null || rule.port != null || rule.pathPrefix != null)
                         Text(listOfNotNull(rule.scheme, rule.port?.let { "Порт $it" }, rule.pathPrefix).joinToString(" · "), style = MaterialTheme.typography.bodySmall)
                     Text("→ ${if (rule.action == Action.ASK) "Выбрать при открытии" else appLabel(apps, rule.browser)}",

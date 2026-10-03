@@ -1,0 +1,8 @@
+BrowserRouter is licensed under GPL-3.0; see LICENSE.
+
+Gradle wrapper scripts and gradle-wrapper.jar are distributed by Gradle
+(https://github.com/gradle/gradle, v8.13.0), licensed under Apache-2.0.
+Their original copyright notices are retained. See gradle/wrapper/LICENSE.
+
+AndroidX / Jetpack libraries are provided by the Android Open Source Project
+under Apache-2.0; Kotlin is provided by JetBrains under Apache-2.0.
