@@ -19,6 +19,7 @@ android {
             val keyPath = System.getenv("SIGNING_KEYSTORE")
             if (!keyPath.isNullOrBlank()) {
                 storeFile = file(keyPath)
+                storeType = "PKCS12"
                 storePassword = System.getenv("SIGNING_STORE_PASSWORD")
                 keyAlias = System.getenv("SIGNING_KEY_ALIAS")
                 keyPassword = System.getenv("SIGNING_KEY_PASSWORD")
@@ -28,7 +29,7 @@ android {
     buildTypes {
         debug { applicationIdSuffix = ".debug"; versionNameSuffix = "-debug" }
         release {
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = if (!System.getenv("SIGNING_KEYSTORE").isNullOrBlank()) signingConfigs.getByName("release") else null
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }

@@ -10,12 +10,15 @@ import org.junit.Before
 import org.junit.After
 import androidx.lifecycle.ViewModelProvider
 import android.util.Log
-import java.io.File
+import android.content.ContentValues
+import android.provider.MediaStore
+import androidx.compose.ui.graphics.asAndroidBitmap
 
 class UiSmokeTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
     @Before fun resetConfiguration() {
         ConfigStore(InstrumentationRegistry.getInstrumentation().targetContext).save(Config(onboarded = true))
+        compose.activityRule.scenario.onActivity { ViewModelProvider(it)[RouterModel::class.java].reload() }
         compose.activityRule.scenario.recreate()
     }
     @After fun captureCurrentState() {
@@ -24,7 +27,7 @@ class UiSmokeTest {
 
     private fun waitForHome() {
         try {
-            compose.waitUntil(10000) { compose.onAllNodesWithText("Создать правило").fetchSemanticsNodes().isNotEmpty() }
+            compose.waitUntil(10000) { compose.onAllNodesWithContentDescription("Создать правило").fetchSemanticsNodes().isNotEmpty() }
         } catch (error: Throwable) {
             compose.runOnIdle {
                 Log.e("UiSmoke", "Model: ${ViewModelProvider(compose.activity)[RouterModel::class.java].state.value}")
@@ -36,9 +39,12 @@ class UiSmokeTest {
 
     @Test fun createRulePersistsAndControlsHaveLabels() {
         waitForHome()
-        compose.onNodeWithText("Создать правило").performClick()
+        compose.onNodeWithContentDescription("Создать правило").performClick()
         compose.onNodeWithText("Сохранить правило").assertIsNotEnabled()
         compose.onNodeWithText("Домен или шаблон").performTextInput("example.ru")
+        compose.onNodeWithText("Выбирать при открытии").performScrollTo().performClick()
+        compose.onNodeWithText("Поиск приложения").performTextInput("Test Browser")
+        compose.onNodeWithText("Test Browser").performClick()
         compose.onNodeWithText("Сохранить правило").assertIsEnabled().performClick()
         compose.waitUntil(10000) { compose.onAllNodesWithText("1. example.ru").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithContentDescription("Активность правила example.ru").assertExists()
@@ -64,12 +70,16 @@ class UiSmokeTest {
         compose.waitForIdle()
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val args = InstrumentationRegistry.getArguments()
-        val dir = File(instrumentation.targetContext.filesDir, "screenshots").apply { mkdirs() }
-        instrumentation.uiAutomation.takeScreenshot()?.let { bitmap ->
-            File(dir, "$name-${args.getString("visualVariant", "default")}.png").outputStream().use {
-                bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
-            }
-            bitmap.recycle()
+        val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
+        val values = ContentValues().apply {
+            put(MediaStore.Images.Media.DISPLAY_NAME, "$name-${args.getString("visualVariant", "default")}.png")
+            put(MediaStore.Images.Media.MIME_TYPE, "image/png")
+            put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/BrowserRouterTests")
+        }
+        val resolver = instrumentation.targetContext.contentResolver
+        val uri = requireNotNull(resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values))
+        resolver.openOutputStream(uri)?.use {
+            check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, it))
         }
     }
 }

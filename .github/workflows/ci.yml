@@ -27,7 +27,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Verify wrapper JAR
         run: echo '81a82aaea5abcc8ff68b3dfcb58b3c3c429378efd98e7433460610fecd7ae45f  gradle/wrapper/gradle-wrapper.jar' | sha256sum --check
-      - run: ./gradlew --no-daemon testDebugUnitTest lintDebug assembleDebug
+      - run: ./gradlew --no-daemon testDebugUnitTest lintDebug lintRelease assembleDebug assembleRelease
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -64,22 +64,7 @@ jobs:
           arch: x86_64
           target: google_apis
           disable-animations: false
-          script: |
-            result=0
-            ./gradlew --no-daemon connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.visualVariant=phone || result=$?
-            mkdir -p screenshots
-            adb exec-out run-as app.browserrouter.debug tar -cf - files/screenshots > screenshots.tar || true
-            tar -xf screenshots.tar -C screenshots --strip-components=2 || true
-            test "$result" = 0
-            adb shell settings put system font_scale 1.6
-            ./gradlew --no-daemon connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=app.browserrouter.UiSmokeTest -Pandroid.testInstrumentationRunnerArguments.visualVariant=large-font --rerun-tasks
-            adb shell settings put system font_scale 1.0
-            adb shell wm size 1600x1200
-            adb shell wm density 160
-            ./gradlew --no-daemon connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=app.browserrouter.UiSmokeTest -Pandroid.testInstrumentationRunnerArguments.visualVariant=wide --rerun-tasks
-            mkdir -p screenshots
-            adb exec-out run-as app.browserrouter.debug tar -cf - files/screenshots > screenshots.tar
-            tar -xf screenshots.tar -C screenshots --strip-components=2
+          script: bash scripts/device-checks.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -50,6 +50,7 @@ fun RouterApp(
                 },
                 floatingActionButton = {
                     if (screen == "rules" && config != null) ExtendedFloatingActionButton(
+                        modifier = Modifier.semantics { contentDescription = "Создать правило" },
                         text = { Text("Создать правило") }, icon = { Icon(painterResource(R.drawable.ic_add), null) },
                         onClick = { editingId = "new" })
                 },

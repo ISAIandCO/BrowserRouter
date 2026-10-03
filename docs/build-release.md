@@ -17,6 +17,8 @@ Debug package — `app.browserrouter.debug`, release — `app.browserrouter`. И
 
 ## Постоянная подпись
 
+CI также собирает release с R8 и выполняет release lint без signing secrets. Этот APK неподписан, служит проверкой сборки и не публикуется. Подписанный release workflow отдельно требует все secrets; без них публикация завершится ошибкой до сборки распространяемого APK.
+
 Создайте ключ **локально у владельца** и сохраните резервную копию вне GitHub. Пароли вводите интерактивно, не помещайте их в shell history:
 
 ```sh

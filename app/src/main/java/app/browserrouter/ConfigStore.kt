@@ -3,22 +3,26 @@ package app.browserrouter
 import android.content.Context
 import android.util.AtomicFile
 
+// AtomicFile does not synchronize readers and writers. Both activities run in one process.
+private val configFileLock = Any()
+
 class ConfigStore(context: Context) {
     private val file = AtomicFile(java.io.File(context.filesDir, "routing-v1.json"))
-    fun load(): Config = try {
+    fun load(): Config = synchronized(configFileLock) { try {
         file.openRead().use { stream ->
             val bytes = stream.readLimited()
             ConfigCodec.decode(bytes.toString(Charsets.UTF_8))
         }
-    } catch (e: java.io.FileNotFoundException) { Config() }
+    } catch (e: java.io.FileNotFoundException) { Config() } }
 
-    fun save(config: Config) {
+    fun save(config: Config) = synchronized(configFileLock) {
         val text = ConfigCodec.encode(config)
         ConfigCodec.decode(text)
         val stream = file.startWrite()
         try {
             stream.write(text.toByteArray(Charsets.UTF_8))
             file.finishWrite(stream)
+            check(file.baseFile.readText(Charsets.UTF_8) == text) { "Не удалось завершить запись настроек" }
         } catch (e: Exception) {
             file.failWrite(stream)
             throw e

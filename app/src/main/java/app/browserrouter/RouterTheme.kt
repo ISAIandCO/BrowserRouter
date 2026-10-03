@@ -5,8 +5,11 @@ import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import android.app.Activity
+import androidx.core.view.WindowCompat
 
 @Composable
 fun RouterTheme(config: Config = Config(), content: @Composable () -> Unit) {
@@ -16,6 +19,14 @@ fun RouterTheme(config: Config = Config(), content: @Composable () -> Unit) {
         ThemeMode.DARK -> true
     }
     val context = LocalContext.current
+    SideEffect {
+        (context as? Activity)?.let { activity ->
+            WindowCompat.getInsetsController(activity.window, activity.window.decorView).apply {
+                isAppearanceLightStatusBars = !dark
+                isAppearanceLightNavigationBars = !dark
+            }
+        }
+    }
     val colors = if (config.dynamicColor && Build.VERSION.SDK_INT >= 31) {
         if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
     } else if (dark) darkColorScheme(primary = Color(0xFFB9C3FF), secondary = Color(0xFFBFC7DC), tertiary = Color(0xFFA3D4BC))
