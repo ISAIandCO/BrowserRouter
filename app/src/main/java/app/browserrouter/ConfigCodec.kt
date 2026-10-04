@@ -40,7 +40,9 @@ object ConfigCodec {
             val o = array.getJSONObject(index)
             val r = Rule(
                 id = o.requiredString("id"), enabled = o.strictBoolean("enabled", true),
-                source = o.nullableString("source"), mode = HostMode.valueOf(o.requiredString("mode")),
+                source = o.nullableString("source"), mode = o.requiredString("mode").let {
+                    if (it == "SUFFIX") HostMode.DOMAIN else HostMode.valueOf(it)
+                },
                 host = o.requiredString("host"), scheme = o.nullableString("scheme"),
                 port = if (!o.has("port") || o.isNull("port")) null else {
                     val p = o.get("port")
