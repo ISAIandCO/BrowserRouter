@@ -1,0 +1,4 @@
+<data-extraction-rules>
+    <cloud-backup><include domain="file" path="routing-v1.json" /><include domain="file" path="geosite.dat" /></cloud-backup>
+    <device-transfer><include domain="file" path="routing-v1.json" /><include domain="file" path="geosite.dat" /></device-transfer>
+</data-extraction-rules>

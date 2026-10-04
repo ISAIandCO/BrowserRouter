@@ -1,0 +1,5 @@
+v2fly/domain-list-community
+Release: 20261002050024
+Commit: be52bb89ac9f878ef40a25a114e815c743e2ed27
+https://github.com/v2fly/domain-list-community
+SHA256: 5534f873d62dabddc245e169626f3c800893264047e411e48827ddfb5c726af6
