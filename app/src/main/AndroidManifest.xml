@@ -29,7 +29,8 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".LinkActivity" android:exported="true" android:excludeFromRecents="true">
+        <activity android:name=".LinkActivity" android:exported="true" android:excludeFromRecents="true"
+            android:theme="@style/Theme.BrowserRouter.Link">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />

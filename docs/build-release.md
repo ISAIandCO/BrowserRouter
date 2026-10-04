@@ -3,21 +3,20 @@
 JDK 17, Android SDK platform 36 + build-tools 36.0.0, Gradle Wrapper 8.13, AGP 8.13.2, Kotlin 2.2.21. Версии зафиксированы. Gradle distribution и wrapper проверяются SHA-256; wrapper взят из официального Gradle v8.13.0.
 
 ```sh
-./gradlew testDebugUnitTest lintDebug assembleDebug
-./gradlew connectedDebugAndroidTest
+./gradlew testReleaseUnitTest lintRelease assembleRelease
 ```
 
 Windows: `gradlew.bat`. Android Studio создаёт local.properties с sdk.dir; файл не коммитится. Загрузка зависимостей требует доступа к Google Maven, Maven Central, Gradle и SDK repository. В РФ доступность зависит от сети; само приложение и его работа не зависят от Google Play Services или этих серверов.
 
 ## CI
 
-`ci.yml` запускается для PR, main и вручную; проверяет JVM tests, debug/release Android lint, собирает debug APK и release с R8 без подписи. Прогоны Android-эмулятора отключены. Отчёты и APK — `checks-and-debug-apk`. CI не создаёт релизы на обычный commit/PR.
+Оба workflow запускаются только вручную: push коммита, изменение README, PR или создание тега не запускают сборку. `ci.yml` выполняет `testReleaseUnitTest` и `lintRelease`, сохраняет `checks-reports` и не собирает APK. `release.yml` в одном job выполняет `testReleaseUnitTest lintRelease assembleRelease`: собирается только один подписанный release APK, без предварительной debug-сборки и повторной release-сборки. Эмулятор не запускается. Отчёты релизного запуска — `release-reports`.
 
 Debug package — `app.browserrouter.debug`, release — `app.browserrouter`. Их настройки независимы. Временный debug keystore генерируется SDK; новая debug-сборка может потребовать удаления прежней. Перед этим экспортируйте настройки. Для подписанных релизов сохраняйте один постоянный ключ.
 
 ## Постоянная подпись
 
-CI также собирает release с R8 и выполняет release lint без signing secrets. Этот APK неподписан, служит проверкой сборки и не публикуется. Подписанный release workflow отдельно требует все secrets; без них публикация завершится ошибкой до сборки распространяемого APK.
+Подписанный release workflow отдельно требует все secrets; без них публикация завершится ошибкой до сборки распространяемого APK.
 
 Создайте ключ **локально у владельца** и сохраните резервную копию вне GitHub. Пароли вводите интерактивно, не помещайте их в shell history:
 
@@ -26,7 +25,7 @@ keytool -genkeypair -keystore browserrouter.p12 -storetype PKCS12 \
   -alias browserrouter -keyalg RSA -keysize 4096 -validity 10000
 ```
 
-Добавьте секреты в GitHub → Repository Settings → Environments → `release-signing` → Environment secrets. Release job привязан к этому окружению. Если в окружении заданы правила допуска веток/тегов, разрешите релизные теги `v*`. Repository secrets с теми же именами также поддерживаются; значения из окружения имеют приоритет.
+Добавьте секреты в GitHub → Repository Settings → Environments → `release-signing` → Environment secrets. Release job привязан к этому окружению. Если в окружении заданы правила допуска веток, разрешите `main`. Repository secrets с теми же именами также поддерживаются; значения из окружения имеют приоритет.
 
 | Secret | Содержимое |
 |---|---|
@@ -43,18 +42,13 @@ Gradle читает SIGNING_KEYSTORE, SIGNING_STORE_PASSWORD, SIGNING_KEY_ALIAS,
 
 1. Дождаться зелёных проверок и включить код в main.
 2. Для новой версии увеличить versionName **и versionCode** в app/build.gradle.kts. Code должен расти при каждом выпускаемом обновлении.
-3. Открыть GitHub → Actions → **Release APK** → **Run workflow**, выбрать **main** в «Use workflow from», указать тег `v<versionName>` (например `v1.0.0`) и запустить. Создавать тег заранее не нужно: workflow создаст его после успешной сборки и проверки подписи. Автоматический запуск при push тега также сохранён.
-4. release.yml сначала выполнит общие CI-проверки, без эмулятора. Затем проверит принадлежность commit истории main, соответствие tag/versionName, наличие secrets, release lint, соберёт release APK и проверит подпись apksigner.
+3. Открыть GitHub → Actions → **Release APK** → **Run workflow**, выбрать **main** в «Use workflow from», указать тег `v<versionName>` (например `v1.0.1`) и запустить. Создавать тег заранее не нужно: workflow создаст его после успешной сборки и проверки подписи.
+4. release.yml проверит commit main, тег и наличие секретов, выполнит JVM-тесты и lint release, один раз соберёт подписанный release APK и проверит подпись apksigner.
 5. GitHub Release получит `BrowserRouter-<версия>.apk`, source ZIP и SHA256SUMS.txt. Google Play workflow нет.
 
-Ручной запуск использует commit main, выбранный GitHub при запуске. Если указанный тег уже существует, он должен указывать на тот же commit; тег на другом commit не перезаписывается. Тег, созданный workflow с GITHUB_TOKEN, не запускает повторную сборку: публикация выполняется в текущем запуске. Окружение `release-signing` при ручном запуске должно разрешать ветку main, а при push тега — теги `v*`.
+Ручной запуск использует commit main, выбранный GitHub при запуске. Если указанный тег уже существует, он должен указывать на тот же commit; тег на другом commit не перезаписывается. Публикация выполняется в текущем ручном запуске. Окружение `release-signing` должно разрешать ветку main.
 
-Дополнительный вариант через Git:
-
-```sh
-git tag v1.0.0
-git push origin v1.0.0
-```
+Тег можно создать заранее через Git, но сам push тега не запустит workflow. Для публикации всё равно используйте Run workflow.
 
 Не менять/перезаписывать уже опубликованный tag или assets. При проблеме исправить код и выпустить новую версию. Если шаг публикации завершился сетевой ошибкой, сначала проверить, появился ли Release: workflow намеренно не использует clobber. При отсутствии Release можно повторить run; при частичной публикации проверять артефакты вручную.
 
