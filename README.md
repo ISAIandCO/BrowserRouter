@@ -1,12 +1,28 @@
 # BrowserRouter
 
 <p align="center"><img src="branding/browserrouter-regular.png" width="300" alt="BrowserRouter"></p>
+<p align="center">
+  <strong>Маршрутизация переходов по ссылкам между браузерами</strong>
+</p>
 
-[![Releases](https://img.shields.io/github/v/release/ISAIandCO/BrowserRouter)](https://github.com/ISAIandCO/BrowserRouter/releases)
-[![Downloads](https://img.shields.io/github/downloads/ISAIandCO/BrowserRouter/total)](Downloads)
-[![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
+<p align="center">
+  <a href="https://github.com/ISAIandCO/BrowserRouter/releases">
+    <img alt="GitHub Release" src="https://img.shields.io/github/v/release/ISAIandCO/BrowserRouter?display_name=tag">
+  </a>
+  <a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://add/https://github.com/ISAIandCO/BrowserRouter">
+    <img alt="Добавить в Obtainium" src="https://img.shields.io/badge/Obtainium-Добавить-2F80ED">
+  </a>
+  <a href="https://github.com/ISAIandCO/BrowserRouter/releases">
+    <img alt="Downloads" src="https://img.shields.io/github/downloads/ISAIandCO/BrowserRouter/total">
+  </a>
+  <a href="LICENSE">
+    <img alt="License: GPL-3.0" src="https://img.shields.io/badge/License-GPL--3.0-blue.svg">
+  </a>
+</p>
 
-**Разные ссылки — разные браузеры.** BrowserRouter принимает веб-ссылки из других приложений и открывает их в браузере по вашим правилам.
+---
+
+BrowserRouter принимает веб-ссылки из других приложений и открывает их в браузере по вашим правилам.
 
 ## Пример маршрутов
 
