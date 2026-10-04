@@ -2,8 +2,8 @@
 
 <p align="center"><img src="branding/browserrouter-regular.png" width="300" alt="BrowserRouter"></p>
 
-[![Android checks](https://github.com/ISAIandCO/BrowserRouter/actions/workflows/ci.yml/badge.svg)](https://github.com/ISAIandCO/BrowserRouter/actions/workflows/ci.yml)
 [![Releases](https://img.shields.io/github/v/release/ISAIandCO/BrowserRouter)](https://github.com/ISAIandCO/BrowserRouter/releases)
+[![Downloads](https://img.shields.io/github/downloads/ISAIandCO/BrowserRouter/total)](Downloads)
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 
 **Разные ссылки — разные браузеры.** BrowserRouter принимает веб-ссылки из других приложений и открывает их в браузере по вашим правилам.
@@ -12,9 +12,9 @@
 
 | Приоритет | Источник | Адрес / режим | Открыть в |
 |---|---|---|---|
-| 1 | Любой | `pikabu.ru`, домен и поддомены | Firefox |
+| 1 | Telegram | `pikabu.ru`, домен и поддомены | Firefox |
 | 2 | Любой | `*.com`, шаблон | Firefox |
-| 3 | Любой | `.ru`, окончание домена | Bearium |
+| 3 | Max | `.ru`, окончание домена | Bearium |
 | 4 | Любой | `.local`, окончание домена | Chrome |
 | Без совпадений | Любой | Остальные ссылки | Ваш fallback или выбор браузера |
 
