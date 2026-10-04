@@ -24,7 +24,7 @@ class RouterModel(app: Application) : AndroidViewModel(app) {
     fun reload() = viewModelScope.launch {
         mutex.withLock {
             runCatching { withContext(Dispatchers.IO) { store.load() } }.fold(
-                { mutable.value = RouterState(it, false) },
+                { mutable.value = RouterState(it, false); GeositeUpdater.schedule(getApplication(), it.geositeUpdates) },
                 { mutable.value = RouterState(loading = false, error = "Настройки не прочитаны: ${it.message}. Файл сохранён; восстановите его импортом или сбросьте явно.") },
             )
         }
@@ -37,9 +37,20 @@ class RouterModel(app: Application) : AndroidViewModel(app) {
     }
     private suspend fun persist(config: Config): Boolean {
         return runCatching { withContext(Dispatchers.IO) { store.save(config) } }.fold(
-            { mutable.value = RouterState(config, false); true },
+            {
+                if (mutable.value.config?.geositeUpdates != config.geositeUpdates) GeositeUpdater.cancelManual(getApplication())
+                mutable.value = RouterState(config, false)
+                GeositeUpdater.schedule(getApplication(), config.geositeUpdates)
+                true
+            },
             { mutable.value = mutable.value.copy(error = "Не удалось сохранить: ${it.message}"); false },
         )
+    }
+    fun saveGeositeUpdates(settings: GeositeUpdates, onSaved: () -> Unit = {}) = viewModelScope.launch {
+        mutex.withLock {
+            val old = mutable.value.config ?: return@withLock
+            if (persist(old.copy(geositeUpdates = settings))) onSaved()
+        }
     }
     fun clearError() { mutable.value = mutable.value.copy(error = null) }
     fun saveRule(rule: Rule, onSaved: () -> Unit = {}) = viewModelScope.launch {

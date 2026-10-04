@@ -4,18 +4,18 @@ import android.content.Context
 import android.util.AtomicFile
 
 // AtomicFile does not synchronize readers and writers. Both activities run in one process.
-private val configFileLock = Any()
+internal val storageLock = Any()
 
 class ConfigStore(context: Context) {
     private val file = AtomicFile(java.io.File(context.filesDir, "routing-v1.json"))
-    fun load(): Config = synchronized(configFileLock) { try {
+    fun load(): Config = synchronized(storageLock) { try {
         file.openRead().use { stream ->
             val bytes = stream.readLimited()
             ConfigCodec.decode(bytes.toString(Charsets.UTF_8))
         }
     } catch (e: java.io.FileNotFoundException) { Config() } }
 
-    fun save(config: Config) = synchronized(configFileLock) {
+    fun save(config: Config) = synchronized(storageLock) {
         val text = ConfigCodec.encode(config)
         ConfigCodec.decode(text)
         val stream = file.startWrite()

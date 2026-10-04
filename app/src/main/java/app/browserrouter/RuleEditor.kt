@@ -24,10 +24,11 @@ fun modeLabel(mode: HostMode) = when (mode) {
     HostMode.SUFFIX -> "Окончание домена"
     HostMode.WILDCARD -> "Шаблон со звёздочкой"
     HostMode.REGEX -> "Regex"
+    HostMode.GEOSITE -> "Geosite"
 }
 
 @Composable
-fun RuleEditor(initial: Rule?, apps: List<BrowserApp>, sources: List<BrowserApp>, onCancel: () -> Unit, onSave: (Rule) -> Unit) {
+fun RuleEditor(initial: Rule?, apps: List<BrowserApp>, sources: List<BrowserApp>, onCancel: () -> Unit, onSave: (Rule) -> Unit, geosite: GeositeDatabase? = null) {
     val id = rememberSaveable { initial?.id ?: UUID.randomUUID().toString() }
     var host by rememberSaveable { mutableStateOf(initial?.host.orEmpty()) }
     var mode by rememberSaveable { mutableStateOf((initial?.mode ?: HostMode.DOMAIN).name) }
@@ -43,7 +44,10 @@ fun RuleEditor(initial: Rule?, apps: List<BrowserApp>, sources: List<BrowserApp>
     var discard by rememberSaveable { mutableStateOf(false) }
     val draft = Rule(id, enabled, source.trim().ifEmpty { null }, HostMode.valueOf(mode), host.trim(),
         scheme.ifEmpty { null }, port.toIntOrNull(), path.ifEmpty { null }, Action.valueOf(action), browser)
-    val error = if (port.isNotEmpty() && port.toIntOrNull() == null) "Порт должен быть числом" else validateRule(draft)
+    val error = if (port.isNotEmpty() && port.toIntOrNull() == null) "Порт должен быть числом"
+        else validateRule(draft) ?: if (draft.mode == HostMode.GEOSITE) {
+            if (geosite == null) "База geosite загружается или недоступна" else geosite.selectorError(host)
+        } else null
     fun leave() { if (draft != (initial ?: Rule(id = id))) discard = true else onCancel() }
     BackHandler { leave() }
     Scaffold(topBar = { TopAppBar(title = { Text(if (initial == null) "Новое правило" else "Изменить правило") },
@@ -76,16 +80,28 @@ fun RuleEditor(initial: Rule?, apps: List<BrowserApp>, sources: List<BrowserApp>
                 }
                 item {
                     OutlinedTextField(host, { host = it }, modifier = Modifier.fillMaxWidth(), singleLine = true,
-                        label = { Text(if (mode == HostMode.REGEX.name) "Regex для hostname" else "Домен или шаблон") },
-                        placeholder = { Text(if (mode == HostMode.WILDCARD.name) "*.ru" else "example.ru") },
+                        label = { Text(when (HostMode.valueOf(mode)) {
+                            HostMode.GEOSITE -> "Группа geosite"
+                            HostMode.REGEX -> "Regex для hostname"
+                            else -> "Домен или шаблон"
+                        }) },
+                        placeholder = { Text(when (HostMode.valueOf(mode)) {
+                            HostMode.GEOSITE -> "geosite:google или google@ads"
+                            HostMode.WILDCARD -> "*.ru"
+                            else -> "example.ru"
+                        }) },
                         isError = host.isNotBlank() && error != null,
                         supportingText = { Text(error ?: when (HostMode.valueOf(mode)) {
+                            HostMode.GEOSITE -> "Список сайтов сервиса или категории; это не определение страны IP. База работает без сети"
                             HostMode.DOMAIN -> "Совпадут example.ru и все его поддомены"
                             HostMode.EXACT -> "Совпадёт только указанный hostname"
                             HostMode.SUFFIX -> "Проверка по границе точки: .ru не совпадёт с example.ru.evil.com"
                             HostMode.WILDCARD -> "* занимает целую часть имени и может охватывать несколько поддоменов. *.example.ru не включает example.ru"
                             HostMode.REGEX -> "Сопоставляется весь нормализованный hostname в punycode. Regex чувствителен к регистру; hostname всегда в нижнем регистре"
                         }) })
+                    if (mode == HostMode.GEOSITE.name) {
+                        FilledTonalButton(onClick = { picker = "geosite" }, enabled = geosite != null) { Text("Выбрать группу") }
+                    }
                 }
                 item {
                     Text("Куда открыть", style = MaterialTheme.typography.titleLarge)
@@ -131,7 +147,9 @@ fun RuleEditor(initial: Rule?, apps: List<BrowserApp>, sources: List<BrowserApp>
             }
         }
     }
-    picker?.let { type -> AppPicker(if (type == "source") "Источник ссылки" else "Выберите браузер", if (type == "source") sources else apps,
+    if (picker == "geosite" && geosite != null) GeositePicker(geosite.names,
+        onSelect = { host = "geosite:$it"; picker = null }, onDismiss = { picker = null })
+    picker?.takeIf { it != "geosite" }?.let { type -> AppPicker(if (type == "source") "Источник ссылки" else "Выберите браузер", if (type == "source") sources else apps,
         onSelect = { value ->
             if (type == "source") source = value.orEmpty()
             else { browser = value; action = if (value == null) Action.ASK.name else Action.BROWSER.name }
@@ -141,4 +159,25 @@ fun RuleEditor(initial: Rule?, apps: List<BrowserApp>, sources: List<BrowserApp>
         text = { Text("Несохранённые изменения правила будут потеряны.") },
         confirmButton = { TextButton(onClick = onCancel) { Text("Отменить изменения") } },
         dismissButton = { TextButton(onClick = { discard = false }) { Text("Продолжить редактирование") } })
+}
+
+@Composable
+private fun GeositePicker(groups: List<String>, onSelect: (String) -> Unit, onDismiss: () -> Unit) {
+    var query by rememberSaveable { mutableStateOf("") }
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp).imePadding()) {
+            Text("Группа geosite", style = MaterialTheme.typography.headlineSmall)
+            OutlinedTextField(query, { query = it }, label = { Text("Поиск группы") }, singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp))
+            LazyColumn(Modifier.fillMaxWidth().weight(1f, fill = false), contentPadding = PaddingValues(bottom = 24.dp)) {
+                val filtered = groups.filter { it.contains(query.removePrefix("geosite:"), true) }
+                if (filtered.isEmpty()) item { Text("Группа не найдена в текущей базе") }
+                items(filtered.size, key = { filtered[it] }) { index ->
+                    TextButton(onClick = { onSelect(filtered[index]) }, modifier = Modifier.fillMaxWidth()) {
+                        Text(filtered[index])
+                    }
+                }
+            }
+        }
+    }
 }

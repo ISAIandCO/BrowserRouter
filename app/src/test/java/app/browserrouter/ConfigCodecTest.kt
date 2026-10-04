@@ -10,7 +10,7 @@ class ConfigCodecTest {
         assertEquals(config, ConfigCodec.decode(ConfigCodec.encode(config)))
     }
     @Test fun unknownSchemaDoesNotSilentlyReset() {
-        assertTrue(runCatching { ConfigCodec.decode(ConfigCodec.encode(config).replace("\"schemaVersion\": 1", "\"schemaVersion\": 2")) }.isFailure)
+        assertTrue(runCatching { ConfigCodec.decode(ConfigCodec.encode(config).replace("\"schemaVersion\": 2", "\"schemaVersion\": 999")) }.isFailure)
     }
     @Test fun duplicateIdsMalformedAndOversizedFilesAreRejected() {
         assertTrue(runCatching { ConfigCodec.decode(ConfigCodec.encode(config.copy(rules = config.rules + config.rules))) }.isFailure)

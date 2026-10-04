@@ -6,3 +6,12 @@ Their original copyright notices are retained. See gradle/wrapper/LICENSE.
 
 AndroidX / Jetpack libraries are provided by the Android Open Source Project
 under Apache-2.0; Kotlin is provided by JetBrains under Apache-2.0.
+
+Bundled geosite.dat: v2fly/domain-list-community, release 20261002050024,
+commit be52bb89ac9f878ef40a25a114e815c743e2ed27, MIT (V2Ray).
+Provenance and SHA256: app/src/main/assets/geosite-source.txt.
+License retained in app/src/main/assets/geosite-LICENSE.txt and in APK assets.
+
+Geosite protobuf decoding uses Google's protobuf-javalite 4.31.1 (BSD-3-Clause);
+Geosite regular expressions use Google's RE2/J 1.8 (BSD-3-Clause).
+Their licenses are retained in app/src/main/assets/*-LICENSE.txt and APK assets.

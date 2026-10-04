@@ -26,6 +26,8 @@ fun RouterApp(
     model: RouterModel, apps: List<BrowserApp>, sources: List<BrowserApp>, catalogLoading: Boolean,
     roleHeld: Boolean, onRequestRole: () -> Unit, onImport: () -> Unit, onExport: () -> Unit,
     imported: Config?, dismissImport: () -> Unit, message: String?, dismissMessage: () -> Unit,
+    geosite: GeositeState?, geositeBusy: Boolean, onGeositeImport: () -> Unit, onGeositeReset: () -> Unit,
+    updateStatus: GeositeUpdateStatus, updatePending: Boolean, onGeositeSave: (GeositeUpdates, Boolean) -> Unit,
 ) {
     val state by model.state.collectAsStateWithLifecycle()
     val config = state.config
@@ -36,7 +38,7 @@ fun RouterApp(
     RouterTheme(config ?: Config()) {
         if (editingId != null && config != null) {
             RuleEditor(config.rules.firstOrNull { it.id == editingId }, apps, sources,
-                onCancel = { editingId = null }, onSave = { model.saveRule(it) { editingId = null } })
+                onCancel = { editingId = null }, onSave = { model.saveRule(it) { editingId = null } }, geosite = geosite?.database)
         } else {
             BackHandler(enabled = screen != "rules") { screen = "rules" }
             Scaffold(
@@ -72,7 +74,8 @@ fun RouterApp(
                                 onToggle = { rule -> model.saveRule(rule.copy(enabled = !rule.enabled)) },
                                 onMove = model::move, onDelete = { deleteId = it })
                             else SettingsScreen(config, apps, catalogLoading, roleHeld, onRequestRole,
-                                onUpdate = { transform -> model.update(transform) }, onImport, onExport, { reset = true })
+                                onUpdate = { transform -> model.update(transform) }, onImport, onExport, { reset = true },
+                                geosite, geositeBusy, onGeositeImport, onGeositeReset, updateStatus, updatePending, onGeositeSave)
                         }
                     }
                 }

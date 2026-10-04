@@ -5,7 +5,7 @@ import org.json.JSONObject
 
 /** Explicit schema avoids reflection and keeps storage/export identical. */
 object ConfigCodec {
-    const val VERSION = 1
+    const val VERSION = 2
     const val MAX_BYTES = 512 * 1024
     const val MAX_RULES = 200
 
@@ -15,6 +15,10 @@ object ConfigCodec {
         put("theme", config.theme.name)
         put("dynamicColor", config.dynamicColor)
         put("onboarded", config.onboarded)
+        put("geositeUpdates", JSONObject().apply {
+            put("url", config.geositeUpdates.url); put("autoUpdate", config.geositeUpdates.autoUpdate)
+            put("intervalHours", config.geositeUpdates.intervalHours); put("unmeteredOnly", config.geositeUpdates.unmeteredOnly)
+        })
         put("rules", JSONArray().apply {
             config.rules.forEach { r -> put(JSONObject().apply {
                 put("id", r.id); put("enabled", r.enabled)
@@ -29,7 +33,7 @@ object ConfigCodec {
     fun decode(text: String): Config {
         require(text.toByteArray(Charsets.UTF_8).size <= MAX_BYTES) { "Файл больше 512 КБ" }
         val root = JSONObject(text)
-        require(root.get("schemaVersion") == VERSION) { "Неподдерживаемая версия формата" }
+        require(root.get("schemaVersion") in listOf(1, VERSION)) { "Неподдерживаемая версия формата" }
         val array = root.getJSONArray("rules")
         require(array.length() <= MAX_RULES) { "Допускается до $MAX_RULES правил" }
         val rules = (0 until array.length()).map { index ->
@@ -52,8 +56,14 @@ object ConfigCodec {
         require(rules.map { it.id }.distinct().size == rules.size) { "Повторяются идентификаторы правил" }
         val fallback = root.nullableString("fallback")
         require(fallback == null || validPackage(fallback)) { "Некорректный fallback-пакет" }
+        val updates = if (!root.has("geositeUpdates")) GeositeUpdates() else root.getJSONObject("geositeUpdates").let { o ->
+            val interval = o.get("intervalHours")
+            require(interval is Int) { "Интервал должен быть целым числом часов" }
+            GeositeUpdates(o.requiredString("url"), o.strictBoolean("autoUpdate", false), interval,
+                o.strictBoolean("unmeteredOnly", false)).also(::validateGeositeUpdates)
+        }
         return Config(rules, fallback, ThemeMode.valueOf(root.optString("theme", "SYSTEM")),
-            root.strictBoolean("dynamicColor", true), root.strictBoolean("onboarded", false))
+            root.strictBoolean("dynamicColor", true), root.strictBoolean("onboarded", false), updates)
     }
     private fun JSONObject.requiredString(key: String): String {
         val v = get(key)

@@ -11,7 +11,7 @@ Windows: `gradlew.bat`. Android Studio создаёт local.properties с sdk.di
 
 ## CI
 
-`ci.yml` запускается для PR, main и вручную; проверяет JVM tests, debug/release Android lint, собирает debug APK и release с R8 без подписи. После успешной сборки эмулятор API 35 выполняет Intent и Compose tests, дополнительные UI-проходы при font_scale=1.6 и широком окне. Отчёты и APK — `checks-and-debug-apk`; результаты устройства и снимки — `device-tests-and-screenshots`. CI не создаёт релизы на обычный commit/PR.
+`ci.yml` запускается для PR, main и вручную; проверяет JVM tests, debug/release Android lint, собирает debug APK и release с R8 без подписи. Прогоны Android-эмулятора отключены. Отчёты и APK — `checks-and-debug-apk`. CI не создаёт релизы на обычный commit/PR.
 
 Debug package — `app.browserrouter.debug`, release — `app.browserrouter`. Их настройки независимы. Временный debug keystore генерируется SDK; новая debug-сборка может потребовать удаления прежней. Перед этим экспортируйте настройки. Для подписанных релизов сохраняйте один постоянный ключ.
 
@@ -44,7 +44,7 @@ Gradle читает SIGNING_KEYSTORE, SIGNING_STORE_PASSWORD, SIGNING_KEY_ALIAS,
 1. Дождаться зелёных проверок и включить код в main.
 2. Для новой версии увеличить versionName **и versionCode** в app/build.gradle.kts. Code должен расти при каждом выпускаемом обновлении.
 3. Создать и push tag, точно равный `v<versionName>` на проверенном commit main, например `v1.0.0`.
-4. release.yml сначала выполнит общие CI-проверки, включая эмулятор. Затем проверит принадлежность commit истории main, соответствие tag/versionName, наличие secrets, release lint, соберёт release APK и проверит подпись apksigner.
+4. release.yml сначала выполнит общие CI-проверки, без эмулятора. Затем проверит принадлежность commit истории main, соответствие tag/versionName, наличие secrets, release lint, соберёт release APK и проверит подпись apksigner.
 5. GitHub Release получит `BrowserRouter-<версия>.apk`, source ZIP и SHA256SUMS.txt. Google Play workflow нет.
 
 ```sh

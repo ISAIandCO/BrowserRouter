@@ -5,7 +5,7 @@ import java.net.URI
 import java.util.Locale
 import java.util.UUID
 
-enum class HostMode { EXACT, DOMAIN, SUFFIX, WILDCARD, REGEX }
+enum class HostMode { EXACT, DOMAIN, SUFFIX, WILDCARD, REGEX, GEOSITE }
 enum class Action { BROWSER, ASK }
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
@@ -27,6 +27,7 @@ data class Config(
     val theme: ThemeMode = ThemeMode.SYSTEM,
     val dynamicColor: Boolean = true,
     val onboarded: Boolean = false,
+    val geositeUpdates: GeositeUpdates = GeositeUpdates(),
 )
 
 data class WebLink(val original: String, val scheme: String, val host: String, val port: Int, val path: String) {
@@ -78,6 +79,7 @@ fun normalizeHost(value: String): String {
 }
 
 private fun hostPattern(rule: Rule): String = when (rule.mode) {
+    HostMode.GEOSITE -> geositeSelector(rule.host).joinToString("@")
     HostMode.REGEX -> rule.host
     HostMode.WILDCARD -> normalizeDots(rule.host.trim()).removeSuffix(".").split('.').joinToString(".") {
         if ('*' in it) {
@@ -101,13 +103,14 @@ fun validateRule(rule: Rule): String? = runCatching {
     require(rule.browser == null || validPackage(rule.browser)) { "Некорректный пакет браузера" }
 }.exceptionOrNull()?.let { if (it is java.util.regex.PatternSyntaxException) "Ошибка regex: ${it.description}" else it.message ?: "Некорректное правило" }
 
-fun matches(rule: Rule, link: WebLink, source: String?): Boolean {
+fun matches(rule: Rule, link: WebLink, source: String?, geosite: GeositeDatabase? = null): Boolean {
     if (!rule.enabled || validateRule(rule) != null || (rule.source != null && rule.source != source)) return false
     if (rule.scheme != null && rule.scheme != link.scheme) return false
     if (rule.port != null && rule.port != link.port) return false
     if (rule.pathPrefix != null && !link.path.startsWith(rule.pathPrefix)) return false
     val pattern = hostPattern(rule)
     return when (rule.mode) {
+        HostMode.GEOSITE -> requireNotNull(geosite) { "База geosite недоступна" }.matches(pattern, link.host)
         HostMode.EXACT -> link.host == pattern
         HostMode.DOMAIN, HostMode.SUFFIX -> link.host == pattern || link.host.endsWith(".$pattern")
         HostMode.WILDCARD -> Regex(pattern.split('*').joinToString(".*") { Regex.escape(it) }).matches(link.host)
@@ -120,8 +123,9 @@ sealed interface Route {
     data class Choose(val reason: String?) : Route
 }
 
-fun route(config: Config, link: WebLink, source: String?, available: Set<String>, self: String): Route {
-    val rule = config.rules.firstOrNull { matches(it, link, source) }
+fun route(config: Config, link: WebLink, source: String?, available: Set<String>, self: String, geosite: GeositeDatabase? = null): Route {
+    val rule = try { config.rules.firstOrNull { matches(it, link, source, geosite) } }
+    catch (e: IllegalArgumentException) { return Route.Choose("Geosite: ${e.message}. Выберите браузер") }
     if (rule?.action == Action.ASK) return Route.Choose(null)
     val target = if (rule != null) rule.browser else config.fallback
     return when {

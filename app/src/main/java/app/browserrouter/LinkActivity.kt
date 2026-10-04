@@ -68,8 +68,12 @@ class LinkActivity : ComponentActivity() {
                     error = "Настройки повреждены или недоступны. Выберите браузер; восстановить настройки можно в BrowserRouter."
                 } else {
                     config = loaded.getOrThrow()
+                    GeositeUpdater.schedule(this@LinkActivity, config.geositeUpdates)
+                    val geosite = if (config.rules.any { it.enabled && it.mode == HostMode.GEOSITE })
+                        withContext(Dispatchers.IO) { runCatching { GeositeStore(this@LinkActivity).load().database }.getOrNull() }
+                        else null
                     when (val decision = withContext(Dispatchers.Default) {
-                        route(config, parsed, source, apps.map { it.packageName }.toSet(), packageName)
+                        route(config, parsed, source, apps.map { it.packageName }.toSet(), packageName, geosite)
                     }) {
                         is Route.Open -> {
                             error = openBrowser(parsed, apps.first { it.packageName == decision.packageName })
