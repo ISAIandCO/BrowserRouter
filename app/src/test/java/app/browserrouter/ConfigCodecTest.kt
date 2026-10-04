@@ -25,4 +25,17 @@ class ConfigCodecTest {
         val text = ConfigCodec.encode(config).replace("\"enabled\": true", "\"enabled\": \"false\"")
         assertTrue(runCatching { ConfigCodec.decode(text) }.isFailure)
     }
+    @Test fun legacySuffixRulesMigrateWithoutChangingHostOrderOrTarget() {
+        val old = config.copy(rules = listOf(
+            Rule(id = "zone", host = ".com", action = Action.BROWSER, browser = "org.mozilla.firefox"),
+            config.rules.first(),
+        ))
+        for (version in listOf(1, 2)) {
+            val json = ConfigCodec.encode(old).replace("\"mode\": \"DOMAIN\"", "\"mode\": \"SUFFIX\"")
+                .replace("\"schemaVersion\": 2", "\"schemaVersion\": $version")
+            val migrated = ConfigCodec.decode(json)
+            assertEquals(old, migrated)
+            assertFalse(ConfigCodec.encode(migrated).contains("\"SUFFIX\""))
+        }
+    }
 }
