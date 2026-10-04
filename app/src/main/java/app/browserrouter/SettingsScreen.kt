@@ -2,6 +2,7 @@
 package app.browserrouter
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,16 +23,15 @@ fun SettingsScreen(config: Config, apps: List<BrowserApp>, catalogLoading: Boole
                    onGeositeSave: (GeositeUpdates, Boolean) -> Unit) {
     var resetGeosite by rememberSaveable { mutableStateOf(false) }
     var picker by rememberSaveable { mutableStateOf(false) }
-    LazyColumn(Modifier.testTag("settings-list").widthIn(max = 840.dp).fillMaxWidth(), contentPadding = PaddingValues(20.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)) {
+    var details by rememberSaveable { mutableStateOf(false) }
+    LazyColumn(Modifier.testTag("settings-list").widthIn(max = 840.dp).fillMaxWidth(), contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item { SettingsGroup("Открытие ссылок") {
-            Text("Если ни одно правило не совпало", style = MaterialTheme.typography.titleMedium)
+            Text("Остальные ссылки", style = MaterialTheme.typography.titleMedium)
             FilledTonalButton(onClick = { picker = true }, enabled = !catalogLoading, modifier = Modifier.fillMaxWidth()) { Text(appLabel(apps, config.fallback)) }
-            Text("Если выбранный браузер недоступен, BrowserRouter предложит другой. Пропускать первое совпавшее правило он не будет.")
             HorizontalDivider()
             Text(if (roleHeld) "BrowserRouter назначен по умолчанию" else "BrowserRouter не назначен по умолчанию", style = MaterialTheme.typography.titleMedium)
             Button(onClick = onRequestRole) { Text("Настроить браузер по умолчанию") }
-            Text("Приложения со встроенным браузером, явным выбором пакета или подтверждёнными App Links могут открывать ссылки напрямую.", style = MaterialTheme.typography.bodySmall)
         } }
         item { SettingsGroup("Geosite") {
             Text(when {
@@ -41,15 +41,13 @@ fun SettingsScreen(config: Config, apps: List<BrowserApp>, catalogLoading: Boole
                 geosite.custom -> "Пользовательская база · ${geosite.database.names.size} групп"
                 else -> "Встроенная база v2fly · 02.10.2026 · ${geosite.database.names.size} групп"
             }, style = MaterialTheme.typography.titleMedium)
-            Text("Для правила выберите условие Geosite и группу сайтов. Проверяется имя сайта, а не страна его IP. Приоритет и остальные условия работают как обычно.")
             GeositeSourceSettings(config.geositeUpdates, geositeBusy, onGeositeSave)
             if (updateStatus.lastSuccess > 0) Text("Успешное обновление: ${java.text.DateFormat.getDateTimeInstance().format(java.util.Date(updateStatus.lastSuccess))}", style = MaterialTheme.typography.bodySmall)
-            Text(updateStatus.result ?: "База ещё не обновлялась по сети", style = MaterialTheme.typography.bodySmall)
+            updateStatus.result?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
             HorizontalDivider()
             OutlinedButton(onClick = onGeositeImport, enabled = !geositeBusy, modifier = Modifier.fillMaxWidth()) { Text("Импортировать geosite.dat") }
-            Text("Формат V2Ray GeoSiteList (.dat), до 16 МБ. Файл заменяет базу целиком; повреждённый файл не меняет текущую базу. При импорте файла автообновление отключается.", style = MaterialTheme.typography.bodySmall)
+            Text("Файл .dat, до 16 МБ. Автообновление отключится.", style = MaterialTheme.typography.bodySmall)
             if (geosite?.custom != false) TextButton(onClick = { resetGeosite = true }, enabled = !geositeBusy) { Text("Использовать встроенную базу") }
-            Text("База хранится отдельно от JSON настроек. Для переноса пользовательской базы сохраните её исходный .dat.", style = MaterialTheme.typography.bodySmall)
         } }
         item { SettingsGroup("Оформление") {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -61,27 +59,34 @@ fun SettingsScreen(config: Config, apps: List<BrowserApp>, catalogLoading: Boole
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("Цвета обоев", style = MaterialTheme.typography.titleMedium)
-                    Text("Dynamic color на Android 12 и новее", style = MaterialTheme.typography.bodySmall)
+                    Text("Android 12+", style = MaterialTheme.typography.bodySmall)
                 }
                 Switch(config.dynamicColor, { value -> onUpdate { it.copy(dynamicColor = value) } },
                     Modifier.semantics { contentDescription = "Цвета обоев" })
             }
         } }
-        item { SettingsGroup("Правила и резервная копия") {
-            Text("JSON содержит правила, fallback и настройки оформления. Храните резервную копию перед переустановкой.")
+        item { SettingsGroup("Резервная копия") {
+            Text("Файл geosite в копию не входит.", style = MaterialTheme.typography.bodySmall)
             OutlinedButton(onClick = onExport, modifier = Modifier.fillMaxWidth()) { Text("Экспортировать настройки") }
             OutlinedButton(onClick = onImport, modifier = Modifier.fillMaxWidth()) { Text("Импортировать настройки") }
             TextButton(onClick = onReset) { Text("Сбросить настройки") }
         } }
         item { SettingsGroup("О BrowserRouter") {
             Text("BrowserRouter ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.titleLarge)
-            Text("Маршрутизатор веб-ссылок для Android. Сеть используется для выбранного источника geosite; адреса открываемых страниц ему не передаются. Без аналитики и истории посещений.")
-            Text("Источник ссылки определяется по calling package / referrer, когда Android передаёт эти данные. Они могут отсутствовать или быть подменены. Не используйте правила как защитную границу.")
+            Text("Маршрутизатор ссылок между браузерами. Без аналитики и истории.")
+            TextButton(onClick = { details = !details }) { Text(if (details) "Скрыть подробности" else "Ограничения и конфиденциальность") }
+            AnimatedVisibility(details) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Сеть нужна для обновления geosite. Адреса открываемых страниц серверу базы не передаются.")
+                    Text("Android не всегда передаёт источник ссылки; эти данные могут быть подменены. Правила не обеспечивают защиту.")
+                    Text("Встроенные браузеры и App Links могут обходить BrowserRouter.")
+                }
+            }
             Text("Лицензия GPL-3.0 · ISAIandCO", style = MaterialTheme.typography.bodySmall)
         } }
     }
     if (resetGeosite) AlertDialog(onDismissRequest = { resetGeosite = false }, title = { Text("Вернуть встроенную базу?") },
-        text = { Text("Пользовательская база будет удалена, автообновление отключится. Правила сохранятся; если группа отсутствует, при открытии ссылки появится выбор браузера.") },
+        text = { Text("Загруженная база будет удалена, автообновление отключится. Правила сохранятся.") },
         confirmButton = { TextButton(onClick = { resetGeosite = false; onGeositeReset() }) { Text("Вернуть") } },
         dismissButton = { TextButton(onClick = { resetGeosite = false }) { Text("Отмена") } })
     if (picker) AppPicker("Браузер для остальных ссылок", apps,
@@ -91,9 +96,9 @@ fun SettingsScreen(config: Config, apps: List<BrowserApp>, catalogLoading: Boole
 @Composable
 private fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(title, style = MaterialTheme.typography.titleLarge)
+        Text(title, style = MaterialTheme.typography.titleMedium)
         Card {
-            Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp), content = content)
         }
     }
 }

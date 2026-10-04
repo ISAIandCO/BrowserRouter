@@ -19,9 +19,8 @@ import androidx.compose.ui.unit.dp
 import java.util.UUID
 
 fun modeLabel(mode: HostMode) = when (mode) {
-    HostMode.EXACT -> "Точный адрес"
+    HostMode.EXACT -> "Точный домен"
     HostMode.DOMAIN -> "Домен и поддомены"
-    HostMode.SUFFIX -> "Окончание домена"
     HostMode.WILDCARD -> "Шаблон со звёздочкой"
     HostMode.REGEX -> "Regex"
     HostMode.GEOSITE -> "Geosite"
@@ -63,15 +62,13 @@ fun RuleEditor(initial: Rule?, apps: List<BrowserApp>, sources: List<BrowserApp>
             LazyColumn(Modifier.testTag("rule-editor-list").widthIn(max = 720.dp).fillMaxWidth(),
                 contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 item {
-                    Text("Откуда приходит ссылка", style = MaterialTheme.typography.titleLarge)
+                    Text("Источник", style = MaterialTheme.typography.titleLarge)
                     FilledTonalButton(onClick = { picker = "source" }, modifier = Modifier.fillMaxWidth()) {
                         Text(if (source.isEmpty()) "Любое приложение" else sources.firstOrNull { it.packageName == source }?.label ?: source)
                     }
-                    Text("Android может не передать источник или передать недостоверные сведения. Тогда правила с конкретным источником не совпадут.",
-                        style = MaterialTheme.typography.bodySmall)
                 }
                 item {
-                    Text("Какие адреса", style = MaterialTheme.typography.titleLarge)
+                    Text("Адрес", style = MaterialTheme.typography.titleLarge)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         HostMode.entries.forEach { option ->
                             FilterChip(selected = mode == option.name, onClick = { mode = option.name }, label = { Text(modeLabel(option)) })
@@ -82,29 +79,24 @@ fun RuleEditor(initial: Rule?, apps: List<BrowserApp>, sources: List<BrowserApp>
                     OutlinedTextField(host, { host = it }, modifier = Modifier.fillMaxWidth(), singleLine = true,
                         label = { Text(when (HostMode.valueOf(mode)) {
                             HostMode.GEOSITE -> "Группа geosite"
-                            HostMode.REGEX -> "Regex для hostname"
+                            HostMode.REGEX -> "Регулярное выражение"
                             else -> "Домен или шаблон"
                         }) },
                         placeholder = { Text(when (HostMode.valueOf(mode)) {
-                            HostMode.GEOSITE -> "geosite:google или google@ads"
+                            HostMode.GEOSITE -> "google или google@ads"
                             HostMode.WILDCARD -> "*.ru"
+                            HostMode.DOMAIN -> ".com или example.ru"
+                            HostMode.REGEX -> ".*\\.com"
                             else -> "example.ru"
                         }) },
                         isError = host.isNotBlank() && error != null,
-                        supportingText = { Text(error ?: when (HostMode.valueOf(mode)) {
-                            HostMode.GEOSITE -> "Список сайтов сервиса или категории; это не определение страны IP. База работает без сети"
-                            HostMode.DOMAIN -> "Совпадут example.ru и все его поддомены"
-                            HostMode.EXACT -> "Совпадёт только указанный hostname"
-                            HostMode.SUFFIX -> "Проверка по границе точки: .ru не совпадёт с example.ru.evil.com"
-                            HostMode.WILDCARD -> "* занимает целую часть имени и может охватывать несколько поддоменов. *.example.ru не включает example.ru"
-                            HostMode.REGEX -> "Сопоставляется весь нормализованный hostname в punycode. Regex чувствителен к регистру; hostname всегда в нижнем регистре"
-                        }) })
+                        supportingText = if (host.isNotBlank() && error != null) { { Text(error) } } else null)
                     if (mode == HostMode.GEOSITE.name) {
                         FilledTonalButton(onClick = { picker = "geosite" }, enabled = geosite != null) { Text("Выбрать группу") }
                     }
                 }
                 item {
-                    Text("Куда открыть", style = MaterialTheme.typography.titleLarge)
+                    Text("Браузер", style = MaterialTheme.typography.titleLarge)
                     FilledTonalButton(onClick = { picker = "browser" }, modifier = Modifier.fillMaxWidth()) {
                         Text(if (action == Action.ASK.name) "Выбирать при открытии" else appLabel(apps, browser))
                     }
@@ -114,7 +106,7 @@ fun RuleEditor(initial: Rule?, apps: List<BrowserApp>, sources: List<BrowserApp>
                         Text("Правило активно", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
                         Switch(enabled, { enabled = it }, Modifier.semantics { contentDescription = "Правило активно" })
                     }
-                    TextButton(onClick = { advanced = !advanced }) { Text(if (advanced) "Скрыть дополнительные условия" else "Дополнительные условия") }
+                    TextButton(onClick = { advanced = !advanced }) { Text(if (advanced) "Скрыть дополнительные условия" else "Дополнительно") }
                     AnimatedVisibility(advanced) {
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             Text("Схема", style = MaterialTheme.typography.titleMedium)
@@ -123,20 +115,17 @@ fun RuleEditor(initial: Rule?, apps: List<BrowserApp>, sources: List<BrowserApp>
                                     FilterChip(scheme == value, { scheme = value }, label = { Text(label) })
                                 }
                             }
-                            OutlinedTextField(port, { port = it }, label = { Text("Порт (необязательно)") },
-                                modifier = Modifier.fillMaxWidth(), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                supportingText = { Text("По умолчанию HTTPS = 443, HTTP = 80") })
-                            OutlinedTextField(path, { path = it }, label = { Text("Начало пути, например /news/") }, modifier = Modifier.fillMaxWidth(),
-                                supportingText = { Text("Сравнивается путь в исходном URL, с учётом регистра и %-кодирования; query не учитывается") })
-                            OutlinedTextField(source, { source = it }, label = { Text("Пакет источника вручную") },
-                                modifier = Modifier.fillMaxWidth(), singleLine = true,
-                                supportingText = { Text("Для приложений, отсутствующих в списке. Пустое поле — любой источник") })
+                            OutlinedTextField(port, { port = it }, label = { Text("Порт") },
+                                modifier = Modifier.fillMaxWidth(), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
+                            OutlinedTextField(path, { path = it }, label = { Text("Начало пути") }, placeholder = { Text("/news/") }, modifier = Modifier.fillMaxWidth())
+                            OutlinedTextField(source, { source = it }, label = { Text("Пакет источника") },
+                                modifier = Modifier.fillMaxWidth(), singleLine = true)
                         }
                     }
                 }
                 item {
                     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
-                        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("Маршрут", style = MaterialTheme.typography.labelLarge)
                             Text("${sources.firstOrNull { it.packageName == source }?.label ?: source.ifEmpty { "Любое приложение" }} → ${host.ifEmpty { "Адрес" }} → ${if (action == Action.ASK.name) "Выбор браузера" else appLabel(apps, browser)}",
                                 style = MaterialTheme.typography.titleMedium)

@@ -3,14 +3,29 @@ package app.browserrouter
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.key.*
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.zIndex
+import kotlinx.coroutines.isActive
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.res.painterResource
@@ -42,7 +57,7 @@ fun RouterApp(
         } else {
             BackHandler(enabled = screen != "rules") { screen = "rules" }
             Scaffold(
-                topBar = { LargeTopAppBar(title = { Text(if (screen == "rules") "BrowserRouter" else "Настройки") }) },
+                topBar = { TopAppBar(title = { Text(if (screen == "rules") "Правила" else "Настройки") }) },
                 bottomBar = {
                     NavigationBar {
                         NavigationBarItem(screen == "rules", { screen = "rules" },
@@ -82,16 +97,16 @@ fun RouterApp(
             }
         }
         deleteId?.let { id -> AlertDialog(onDismissRequest = { deleteId = null },
-            title = { Text("Удалить правило?") }, text = { Text("Это действие удалит выбранный маршрут.") },
+            title = { Text("Удалить правило?") },
             confirmButton = { TextButton(onClick = { model.update { c -> c.copy(rules = c.rules.filterNot { it.id == id }) }; deleteId = null }) { Text("Удалить") } },
             dismissButton = { TextButton(onClick = { deleteId = null }) { Text("Отмена") } }) }
         if (reset) AlertDialog(onDismissRequest = { reset = false }, title = { Text("Сбросить настройки?") },
-            text = { Text("Все правила, fallback и настройки темы будут удалены. Сначала экспортируйте их, если они нужны.") },
+            text = { Text("Все правила и настройки будут удалены.") },
             confirmButton = { TextButton(onClick = { model.reset(); reset = false }) { Text("Сбросить") } },
             dismissButton = { TextButton(onClick = { reset = false }) { Text("Отмена") } })
         imported?.let { data ->
             AlertDialog(onDismissRequest = dismissImport, title = { Text("Импорт: ${data.rules.size} правил") },
-                text = { Text("Добавление сохранит текущие настройки и поставит новые правила в конец. Замена полностью перезапишет настройки содержимым файла.") },
+                text = { Text("Добавить правила или заменить текущие настройки?") },
                 confirmButton = {
                     Column {
                         TextButton(onClick = { model.importConfig(data, false); dismissImport() },
@@ -111,9 +126,51 @@ fun RouterApp(
 private fun RulesScreen(
     config: Config, apps: List<BrowserApp>, sources: List<BrowserApp>, roleHeld: Boolean, onRequestRole: () -> Unit,
     onDismissIntro: () -> Unit, onCreate: () -> Unit, onEdit: (String) -> Unit,
-    onToggle: (Rule) -> Unit, onMove: (String, Int) -> Unit, onDelete: (String) -> Unit,
+    onToggle: (Rule) -> Unit, onMove: (String, Int, (List<Rule>) -> Unit) -> Unit, onDelete: (String) -> Unit,
 ) {
-    LazyColumn(Modifier.widthIn(max = 840.dp).fillMaxWidth(),
+    val listState = rememberLazyListState()
+    val haptic = LocalHapticFeedback.current
+    val edge = with(LocalDensity.current) { 64.dp.toPx() }
+    var ordered by remember(config.rules) { mutableStateOf(config.rules) }
+    val currentConfig by rememberUpdatedState(config)
+    val currentMove by rememberUpdatedState(onMove)
+    var draggedId by remember { mutableStateOf<String?>(null) }
+    var dragTop by remember { mutableFloatStateOf(0f) }
+    var dragOffset by remember { mutableFloatStateOf(0f) }
+    var dragHeight by remember { mutableFloatStateOf(0f) }
+    var pointerY by remember { mutableFloatStateOf(0f) }
+    fun moveDragged() {
+        val id = draggedId ?: return
+        val visible = listState.layoutInfo.visibleItemsInfo.mapNotNull { item ->
+            (item.key as? String)?.let { it to (item.offset + item.size / 2f) }
+        }
+        ordered = moveRule(ordered, id, ruleDropTarget(ordered, id, dragTop + dragOffset + dragHeight / 2f, visible))
+    }
+    fun cancelDrag() { draggedId = null; ordered = currentConfig.rules }
+    fun drop() {
+        val id = draggedId ?: return
+        val delta = ordered.indexOfFirst { it.id == id } - currentConfig.rules.indexOfFirst { it.id == id }
+        draggedId = null
+        if (delta != 0) currentMove(id, delta) { ordered = it }
+    }
+    LaunchedEffect(config.rules) { cancelDrag() }
+    LaunchedEffect(draggedId) {
+        var previous = withFrameNanos { it }
+        while (draggedId != null && isActive) {
+            val now = withFrameNanos { it }
+            val seconds = ((now - previous) / 1_000_000_000f).coerceAtMost(0.05f)
+            previous = now
+            val layout = listState.layoutInfo
+            val speed = when {
+                pointerY < layout.viewportStartOffset + edge -> -(layout.viewportStartOffset + edge - pointerY) / edge
+                pointerY > layout.viewportEndOffset - edge -> (pointerY - layout.viewportEndOffset + edge) / edge
+                else -> 0f
+            }.coerceIn(-1f, 1f)
+            if (speed != 0f) listState.scrollBy(speed * edge * 12f * seconds)
+            moveDragged()
+        }
+    }
+    LazyColumn(Modifier.widthIn(max = 840.dp).fillMaxWidth(), state = listState,
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 104.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
         if (!config.onboarded) item {
@@ -121,7 +178,7 @@ private fun RulesScreen(
                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Icon(painterResource(R.drawable.ic_route), null, Modifier.size(48.dp))
                     Text("Каждой ссылке — свой браузер", style = MaterialTheme.typography.headlineSmall)
-                    Text("Назначьте BrowserRouter браузером по умолчанию и создайте первое правило. Сайты откроются в выбранных вами приложениях.")
+                    Text("Назначьте браузером по умолчанию и добавьте правило.")
                     Button(onClick = onRequestRole, shapes = ButtonDefaults.shapes()) { Text(if (roleHeld) "Проверить назначение" else "Назначить по умолчанию") }
                     FilledTonalButton(onClick = onCreate) { Text("Создать первое правило") }
                     TextButton(onClick = onDismissIntro) { Text("Скрыть подсказку") }
@@ -131,41 +188,81 @@ private fun RulesScreen(
         item {
             AssistChip(onClick = onRequestRole, label = { Text(if (roleHeld) "По умолчанию · включено" else "По умолчанию · не назначен") })
         }
-        item { Text("Первое активное совпадение определяет браузер", style = MaterialTheme.typography.titleMedium) }
+        item { Text("Выше — приоритетнее", style = MaterialTheme.typography.titleMedium) }
         if (config.rules.isEmpty()) item {
             OutlinedCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("Пока нет маршрутов", style = MaterialTheme.typography.headlineSmall)
-                    Text("Например, *.ru можно отправить в Bearium, а *.com — в Firefox. Выбор браузеров всегда ваш.")
                     FilledTonalButton(onClick = onCreate) { Text("Добавить правило") }
                 }
             }
         }
-        itemsIndexed(config.rules, key = { _, r -> r.id }) { index, rule ->
-            Card(Modifier.animateItem().fillMaxWidth(), colors = CardDefaults.cardColors(
+        itemsIndexed(ordered, key = { _, r -> r.id }) { index, rule ->
+            val dragging = draggedId == rule.id
+            val moveAction: (Int) -> Unit = { delta -> currentMove(rule.id, delta) { ordered = it } }
+            val modifier = Modifier.animateItem(placementSpec = if (dragging) null else spring())
+                .fillMaxWidth().zIndex(if (dragging) 1f else 0f)
+                .graphicsLayer {
+                    translationY = if (dragging) dragTop + dragOffset -
+                        (listState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == rule.id }?.offset ?: dragTop.toInt()) else 0f
+                }
+                .semantics(mergeDescendants = true) {
+                    customActions = buildList {
+                        if (index > 0) add(CustomAccessibilityAction("Повысить приоритет") { moveAction(-1); true })
+                        if (index < ordered.lastIndex) add(CustomAccessibilityAction("Понизить приоритет") { moveAction(1); true })
+                    }
+                }
+                .onKeyEvent { event ->
+                    val delta = when (event.key) { Key.DirectionUp -> -1; Key.DirectionDown -> 1; else -> 0 }
+                    if (event.type == KeyEventType.KeyDown && event.isAltPressed && delta != 0 && index + delta in ordered.indices) {
+                        moveAction(delta)
+                        true
+                    } else false
+                }.focusable()
+                .pointerInput(rule.id) {
+                    detectDragGesturesAfterLongPress(
+                        onDragStart = { offset ->
+                            listState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == rule.id }?.let {
+                                draggedId = rule.id
+                                dragTop = it.offset.toFloat()
+                                dragHeight = it.size.toFloat()
+                                dragOffset = 0f
+                                pointerY = dragTop + offset.y
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            }
+                        },
+                        onDragEnd = { drop() },
+                        onDragCancel = { cancelDrag() },
+                        onDrag = { change, amount ->
+                            if (draggedId == rule.id) {
+                                change.consume()
+                                dragOffset += amount.y
+                                pointerY += amount.y
+                                moveDragged()
+                            }
+                        },
+                    )
+                }
+            Card(modifier, elevation = CardDefaults.cardElevation(defaultElevation = if (dragging) 8.dp else 0.dp),
+                colors = CardDefaults.cardColors(
                 containerColor = if (rule.enabled) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceContainerLow)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(painterResource(R.drawable.ic_drag), "Перетащить ${rule.host}", Modifier.size(24.dp).padding(end = 4.dp))
                         Column(Modifier.weight(1f)) {
                             Text("${index + 1}. ${rule.host}", style = MaterialTheme.typography.titleLarge)
                             Text(modeLabel(rule.mode), style = MaterialTheme.typography.labelLarge)
                         }
-                        Switch(rule.enabled, { onToggle(rule) }, Modifier.semantics { contentDescription = "Активность правила ${rule.host}" })
+                        Switch(rule.enabled, { onToggle(rule) }, Modifier.semantics { contentDescription = "Активность правила ${rule.host}" }, enabled = draggedId == null)
                     }
-                    Text(rule.source?.let { pkg -> "Источник: ${sources.firstOrNull { it.packageName == pkg }?.label ?: pkg} (если определён)" } ?: "Из любого приложения")
+                    Text(rule.source?.let { pkg -> "Источник: ${sources.firstOrNull { it.packageName == pkg }?.label ?: pkg}" } ?: "Из любого приложения")
                     if (rule.scheme != null || rule.port != null || rule.pathPrefix != null)
                         Text(listOfNotNull(rule.scheme, rule.port?.let { "Порт $it" }, rule.pathPrefix).joinToString(" · "), style = MaterialTheme.typography.bodySmall)
                     Text("→ ${if (rule.action == Action.ASK) "Выбрать при открытии" else appLabel(apps, rule.browser)}",
                         style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                     FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TextButton(onClick = { onEdit(rule.id) }) { Text("Изменить") }
-                        IconButton(onClick = { onMove(rule.id, -1) }, enabled = index > 0) {
-                            Icon(painterResource(R.drawable.ic_up), "Повысить приоритет ${rule.host}")
-                        }
-                        IconButton(onClick = { onMove(rule.id, 1) }, enabled = index < config.rules.lastIndex) {
-                            Icon(painterResource(R.drawable.ic_down), "Понизить приоритет ${rule.host}")
-                        }
-                        IconButton(onClick = { onDelete(rule.id) }) { Icon(painterResource(R.drawable.ic_delete), "Удалить ${rule.host}") }
+                        TextButton(onClick = { onEdit(rule.id) }, enabled = draggedId == null) { Text("Изменить") }
+                        IconButton(onClick = { onDelete(rule.id) }, enabled = draggedId == null) { Icon(painterResource(R.drawable.ic_delete), "Удалить ${rule.host}") }
                     }
                 }
             }
@@ -212,7 +309,7 @@ fun AppPicker(title: String, apps: List<BrowserApp>, allowNone: Boolean = true,
                     }
                 }
                 val filtered = apps.filter { it.label.contains(query, true) || it.packageName.contains(query, true) }
-                if (filtered.isEmpty()) item { Text("Подходящих приложений нет. Проверьте, что они установлены и включены.") }
+                if (filtered.isEmpty()) item { Text("Приложения не найдены") }
                 itemsIndexed(filtered, key = { _, a -> a.packageName }) { _, app -> AppRow(app) { onSelect(app.packageName) } }
             }
         }

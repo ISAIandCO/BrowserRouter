@@ -5,7 +5,7 @@ import java.net.URI
 import java.util.Locale
 import java.util.UUID
 
-enum class HostMode { EXACT, DOMAIN, SUFFIX, WILDCARD, REGEX, GEOSITE }
+enum class HostMode { EXACT, DOMAIN, WILDCARD, REGEX, GEOSITE }
 enum class Action { BROWSER, ASK }
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
@@ -112,7 +112,7 @@ fun matches(rule: Rule, link: WebLink, source: String?, geosite: GeositeDatabase
     return when (rule.mode) {
         HostMode.GEOSITE -> requireNotNull(geosite) { "База geosite недоступна" }.matches(pattern, link.host)
         HostMode.EXACT -> link.host == pattern
-        HostMode.DOMAIN, HostMode.SUFFIX -> link.host == pattern || link.host.endsWith(".$pattern")
+        HostMode.DOMAIN -> link.host == pattern || link.host.endsWith(".$pattern")
         HostMode.WILDCARD -> Regex(pattern.split('*').joinToString(".*") { Regex.escape(it) }).matches(link.host)
         HostMode.REGEX -> Regex(pattern).matches(link.host)
     }

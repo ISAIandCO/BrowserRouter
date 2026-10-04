@@ -20,11 +20,15 @@ class RulesTest {
         assertFalse(matches(r, link("https://badexample.ru"), null))
         assertFalse(matches(r, link("https://example.ru.evil.com"), null))
     }
-    @Test fun suffixRespectsDotBoundary() {
-        val r = rule(".ru", HostMode.SUFFIX)
-        assertTrue(matches(r, link(), null))
-        assertFalse(matches(r, link("https://example.ru.evil.com"), null))
-        assertFalse(matches(r, link("https://notru"), null))
+    @Test fun domainsAlsoSupportTopLevelZonesWithOptionalLeadingDot() {
+        for (pattern in listOf("com", ".com")) {
+            val r = rule(pattern)
+            assertNull(validateRule(r))
+            assertTrue(matches(r, link("https://com"), null))
+            assertTrue(matches(r, link("https://a.example.com"), null))
+            assertFalse(matches(r, link("https://example.com.evil.org"), null))
+            assertFalse(matches(r, link("https://notcom"), null))
+        }
     }
     @Test fun wildcardSupportsSeveralLabelsAndExcludesApex() {
         val r = rule("*.pikabu.ru", HostMode.WILDCARD)

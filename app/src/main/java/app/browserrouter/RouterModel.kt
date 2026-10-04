@@ -63,11 +63,13 @@ class RouterModel(app: Application) : AndroidViewModel(app) {
             if (persist(next)) onSaved()
         }
     }
-    fun move(id: String, delta: Int) = update { c ->
-        val rules = c.rules.toMutableList()
-        val index = rules.indexOfFirst { it.id == id }
-        if (index >= 0 && index + delta in rules.indices) rules.add(index + delta, rules.removeAt(index))
-        c.copy(rules = rules)
+    fun move(id: String, delta: Int, onMoved: (List<Rule>) -> Unit) = viewModelScope.launch {
+        mutex.withLock {
+            val old = mutable.value.config ?: return@withLock
+            val from = old.rules.indexOfFirst { it.id == id }
+            val next = old.copy(rules = moveRule(old.rules, id, from + delta))
+            onMoved(if (persist(next)) next.rules else old.rules)
+        }
     }
     fun importConfig(imported: Config, replace: Boolean) = viewModelScope.launch {
         mutex.withLock {
