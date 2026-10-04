@@ -1,8 +1,6 @@
 name: Release APK
-run-name: Release APK ${{ inputs.tag || github.ref_name }}
+run-name: Release APK ${{ inputs.tag }}
 on:
-  push:
-    tags: ['v*']
   workflow_dispatch:
     inputs:
       tag:
@@ -12,13 +10,10 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: github-release-${{ inputs.tag || github.ref_name }}
+  group: github-release-${{ inputs.tag }}
   cancel-in-progress: false
 jobs:
-  checks:
-    uses: ./.github/workflows/ci.yml
   release:
-    needs: checks
     environment: release-signing
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -37,16 +32,18 @@ jobs:
           packages: 'platform-tools platforms;android-36 build-tools;36.0.0'
           log-accepted-android-sdk-licenses: false
       - uses: gradle/actions/setup-gradle@v4
+      - name: Verify wrapper JAR
+        run: echo '81a82aaea5abcc8ff68b3dfcb58b3c3c429378efd98e7433460610fecd7ae45f  gradle/wrapper/gradle-wrapper.jar' | sha256sum --check
       - name: Validate release tag and signing configuration
         env:
-          REQUESTED_TAG: ${{ inputs.tag || github.ref_name }}
+          REQUESTED_TAG: ${{ inputs.tag }}
           KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ] && [ "$GITHUB_REF" != refs/heads/main ]; then
+          if [ "$GITHUB_REF" != refs/heads/main ]; then
             echo "::error::Select main in Use workflow from for a manual release"
             exit 1
           fi
@@ -72,7 +69,7 @@ jobs:
           SIGNING_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
           SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: ./gradlew --no-daemon testDebugUnitTest lintRelease assembleRelease
+        run: ./gradlew --no-daemon testReleaseUnitTest lintRelease assembleRelease
       - name: Prepare assets
         run: |
           mkdir release
@@ -93,6 +90,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$RELEASE_TAG" release/* --verify-tag --generate-notes --title "BrowserRouter ${RELEASE_VERSION}"
+      - name: Upload verification reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-reports
+          path: app/build/reports/
+          if-no-files-found: warn
       - name: Remove signing key
         if: always()
         run: rm -f "$RUNNER_TEMP/browserrouter.p12"
