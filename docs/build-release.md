@@ -26,7 +26,7 @@ keytool -genkeypair -keystore browserrouter.p12 -storetype PKCS12 \
   -alias browserrouter -keyalg RSA -keysize 4096 -validity 10000
 ```
 
-Добавьте GitHub → Repository Settings → Secrets and variables → Actions:
+Добавьте секреты в GitHub → Repository Settings → Environments → `release-signing` → Environment secrets. Release job привязан к этому окружению. Если в окружении заданы правила допуска веток/тегов, разрешите релизные теги `v*`. Repository secrets с теми же именами также поддерживаются; значения из окружения имеют приоритет.
 
 | Secret | Содержимое |
 |---|---|
