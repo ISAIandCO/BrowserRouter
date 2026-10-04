@@ -43,9 +43,13 @@ Gradle читает SIGNING_KEYSTORE, SIGNING_STORE_PASSWORD, SIGNING_KEY_ALIAS,
 
 1. Дождаться зелёных проверок и включить код в main.
 2. Для новой версии увеличить versionName **и versionCode** в app/build.gradle.kts. Code должен расти при каждом выпускаемом обновлении.
-3. Создать и push tag, точно равный `v<versionName>` на проверенном commit main, например `v1.0.0`.
+3. Открыть GitHub → Actions → **Release APK** → **Run workflow**, выбрать **main** в «Use workflow from», указать тег `v<versionName>` (например `v1.0.0`) и запустить. Создавать тег заранее не нужно: workflow создаст его после успешной сборки и проверки подписи. Автоматический запуск при push тега также сохранён.
 4. release.yml сначала выполнит общие CI-проверки, без эмулятора. Затем проверит принадлежность commit истории main, соответствие tag/versionName, наличие secrets, release lint, соберёт release APK и проверит подпись apksigner.
 5. GitHub Release получит `BrowserRouter-<версия>.apk`, source ZIP и SHA256SUMS.txt. Google Play workflow нет.
+
+Ручной запуск использует commit main, выбранный GitHub при запуске. Если указанный тег уже существует, он должен указывать на тот же commit; тег на другом commit не перезаписывается. Тег, созданный workflow с GITHUB_TOKEN, не запускает повторную сборку: публикация выполняется в текущем запуске. Окружение `release-signing` при ручном запуске должно разрешать ветку main, а при push тега — теги `v*`.
+
+Дополнительный вариант через Git:
 
 ```sh
 git tag v1.0.0
