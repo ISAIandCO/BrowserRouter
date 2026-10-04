@@ -33,9 +33,7 @@ fun GeositeSourceSettings(saved: GeositeUpdates, busy: Boolean, onSave: (Geosite
         if (custom) OutlinedTextField(url, { url = it }, label = { Text("HTTPS-ссылка на .dat") },
             modifier = Modifier.fillMaxWidth(), enabled = !busy, singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-            supportingText = { Text("Прямая ссылка CDN, GitHub raw/blob или файл в Releases. Ссылка на страницу репозитория не подходит") })
-        else Text(url, style = MaterialTheme.typography.bodySmall)
-        Text("При недоступности GitHub попробуйте вариант CDN. В новой базе могут отличаться названия и состав групп.", style = MaterialTheme.typography.bodySmall)
+            supportingText = { Text("Прямая HTTPS-ссылка на файл") })
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Автообновление", Modifier.weight(1f))
             Switch(auto, { auto = it }, enabled = !busy, modifier = Modifier.semantics { contentDescription = "Автообновление geosite" })
@@ -44,7 +42,7 @@ fun GeositeSourceSettings(saved: GeositeUpdates, busy: Boolean, onSave: (Geosite
             OutlinedTextField(hours, { hours = it }, label = { Text("Интервал, часов") }, singleLine = true,
                 modifier = Modifier.fillMaxWidth(), enabled = !busy,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                supportingText = { Text("От 1 до 720; по умолчанию 24. Android может отложить запуск для экономии батареи") })
+                supportingText = { Text("1–720 часов") })
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Только сеть без тарификации", Modifier.weight(1f))
@@ -57,7 +55,6 @@ fun GeositeSourceSettings(saved: GeositeUpdates, busy: Boolean, onSave: (Geosite
         }
         OutlinedButton(onClick = { onSave(draft, false) }, enabled = !busy && error == null && draft != saved,
             modifier = Modifier.fillMaxWidth()) { Text("Сохранить настройки источника") }
-        Text("Загрузка заменяет базу целиком после проверки. При ошибке продолжит работать предыдущая база. Выбранный сервер получает запрос на базу; URL открываемых сайтов не передаются.", style = MaterialTheme.typography.bodySmall)
     }
     if (picker) ModalBottomSheet(onDismissRequest = { picker = false }) {
         LazyColumn(Modifier.fillMaxWidth(), contentPadding = PaddingValues(20.dp)) {
