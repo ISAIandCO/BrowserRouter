@@ -1,14 +1,12 @@
 # BrowserRouter
 
-<p align="center"><img src="branding/browserrouter-regular.png" width="160" alt="BrowserRouter"></p>
+<p align="center"><img src="branding/browserrouter-regular.png" width="300" alt="BrowserRouter"></p>
 
 [![Android checks](https://github.com/ISAIandCO/BrowserRouter/actions/workflows/ci.yml/badge.svg)](https://github.com/ISAIandCO/BrowserRouter/actions/workflows/ci.yml)
 [![Releases](https://img.shields.io/github/v/release/ISAIandCO/BrowserRouter)](https://github.com/ISAIandCO/BrowserRouter/releases)
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 
-**Разные ссылки — разные браузеры.** BrowserRouter принимает веб-ссылки из других приложений и открывает их в браузере по вашим правилам. Сам он страницы не загружает.
-
-Android 10 и новее · Material 3 Expressive · светлая и тёмная темы · цвета обоев на Android 12+.
+**Разные ссылки — разные браузеры.** BrowserRouter принимает веб-ссылки из других приложений и открывает их в браузере по вашим правилам.
 
 ## Пример маршрутов
 
@@ -33,8 +31,6 @@ Android 10 и новее · Material 3 Expressive · светлая и тёмн�
 5. Откройте ссылку из другого приложения через внешний браузер.
 
 Обычные правила не требуют regex. «Домен и поддомены» включает сам домен; `*.example.ru` включает только поддомены. `.ru` не совпадает с `example.ru.evil.com`.
-
-До первого подписанного релиза тестовый APK доступен в артефактах успешной [сборки Actions](https://github.com/ISAIandCO/BrowserRouter/actions/workflows/ci.yml): `checks-and-debug-apk` → `outputs/apk/debug/app-debug.apk`. Он устанавливается отдельно с пакетом `app.browserrouter.debug`; это тестовая сборка. Скачивание артефактов GitHub может требовать входа в аккаунт. Подпись debug-сборок между прогонами может изменяться: перед переустановкой экспортируйте правила.
 
 ## Управление правилами
 
