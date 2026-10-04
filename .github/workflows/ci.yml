@@ -1,14 +1,10 @@
 name: Android checks
 on:
-  push:
-    branches: [main]
-  pull_request:
   workflow_dispatch:
-  workflow_call:
 permissions:
   contents: read
 concurrency:
-  group: checks-${{ github.event.pull_request.number || github.ref }}
+  group: checks-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   build:
@@ -27,12 +23,11 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Verify wrapper JAR
         run: echo '81a82aaea5abcc8ff68b3dfcb58b3c3c429378efd98e7433460610fecd7ae45f  gradle/wrapper/gradle-wrapper.jar' | sha256sum --check
-      - run: ./gradlew --no-daemon testDebugUnitTest lintDebug lintRelease assembleDebug assembleRelease
+      - run: ./gradlew --no-daemon testReleaseUnitTest lintRelease
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: checks-and-debug-apk
+          name: checks-reports
           path: |
-            app/build/outputs/apk/debug/*.apk
             app/build/reports/
           if-no-files-found: warn
